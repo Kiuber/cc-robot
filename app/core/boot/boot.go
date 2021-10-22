@@ -1,7 +1,8 @@
 package cboot
 
 import (
-	"cc-robot/module"
+	cyaml "cc-robot/core/tool/yaml"
+	"cc-robot/model"
 	"cc-robot/service"
 	"fmt"
 	log "github.com/sirupsen/logrus"
@@ -28,10 +29,15 @@ func initLog() {
 	log.SetReportCaller(false)
 }
 
-func initContext() *module.Context {
-	return &module.Context{
+func initContext() *model.Context {
+	ctx := &model.Context{
 		IsDev: true,
 	}
+
+	infra := &model.Infra{}
+	cyaml.LoadConfig("infra.yaml", infra)
+	ctx.Config.Infra = *infra
+	return ctx
 }
 
 func startListenTcpService() {

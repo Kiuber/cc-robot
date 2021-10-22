@@ -1,29 +1,24 @@
 package cyaml
 
 import (
-	"cc-robot/module"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 )
 
-// LoadConfig TODO: @qingbao, adjust paramter type and return type
-func LoadConfig() module.ApiConfig {
-	out := new(module.ApiConfig)
-	file, err := ioutil.ReadFile("config/config.yaml")
+func LoadConfig(configFname string, out interface{}) {
+	file, err := ioutil.ReadFile(fmt.Sprintf("config/%s", configFname))
+
+	logger := log.WithFields(log.Fields{configFname: configFname})
 
 	if err != nil {
-		log.WithFields(log.Fields{
-			"file": file,
-			"err": err,
-		}).Error("LoadConfig ReadFile err")
+		logger.Error("LoadConfig ReadFile err")
 	}
+
+	logger.Error("LoadConfig test")
 	err = yaml.Unmarshal(file, out)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"file": file,
-			"err": err,
-		}).Error("LoadConfig Unmarshal err")
+		logger.Error("LoadConfig Unmarshal err")
 	}
-	return *out
 }
