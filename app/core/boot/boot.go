@@ -26,7 +26,11 @@ func Init() {
 }
 
 func initLog() {
-	log.SetReportCaller(false)
+	log.SetReportCaller(true)
+	formatter := &log.TextFormatter{
+		FullTimestamp: true,
+	}
+	log.SetFormatter(formatter)
 }
 
 func initContext() *model.Context {

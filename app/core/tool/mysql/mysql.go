@@ -15,7 +15,7 @@ var db *gorm.DB
 func Setup(ctx model.Context) {
 	var dbURI string
 	var dialector gorm.Dialector
-	dbURI = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=true",
+	dbURI = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local",
 		ctx.Config.Infra.MySQLConfig.User,
 		ctx.Config.Infra.MySQLConfig.Password,
 		ctx.Config.Infra.MySQLConfig.Host,

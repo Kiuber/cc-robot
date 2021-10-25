@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/mitchellh/mapstructure v1.4.2
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0 // indirect
 	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect

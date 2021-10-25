@@ -2,6 +2,7 @@ package mexc
 
 import (
 	chttp "cc-robot/core/tool/http"
+	"github.com/mitchellh/mapstructure"
 	"cc-robot/model"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -15,30 +16,34 @@ import (
 
 const baseUrl = "https://www.mexc.com/open/api/v2"
 
-func Ping(ctx model.Context) interface{} {
+func Ping(ctx model.Context) model.MexcAPIData {
 	return mexcGetJson(ctx, "common/ping", nil)
 }
 
-func Timestamp(ctx model.Context) interface{} {
+func Timestamp(ctx model.Context) model.MexcAPIData {
 	return mexcGetJson(ctx, "common/timestamp", nil)
 }
 
-func Symbols(ctx model.Context) interface{} {
-	return mexcGetJson(ctx, "market/api_symbols", nil)
+func Symbols(ctx model.Context) model.MexcAPIData {
+	mexcAPIData := mexcGetJson(ctx, "market/api_symbols", nil)
+	supportSymbols := new(model.SupportSymbols)
+	mapstructure.Decode(mexcAPIData.RawPayload, &supportSymbols)
+	mexcAPIData.Payload = *supportSymbols
+	return mexcAPIData
 }
 
-func Depth(ctx model.Context, symbol string, depth string) interface{} {
+func Depth(ctx model.Context, symbol string, depth string) model.MexcAPIData {
 	params := url.Values{}
 	params.Set("symbol", symbol)
 	params.Set("depth", depth)
 	return mexcGetJson(ctx, "market/depth", params)
 }
 
-func AccountInfo(ctx model.Context) interface{} {
+func AccountInfo(ctx model.Context) model.MexcAPIData {
 	return mexcGetJson(ctx, "account/info", nil)
 }
 
-func mexcGetJson(ctx model.Context, apiPath string, params url.Values) interface{} {
+func mexcGetJson(ctx model.Context, apiPath string, params url.Values) model.MexcAPIData {
 	url := buildUrl(apiPath)
 	header := buildHeader(ctx, params)
 
@@ -46,7 +51,23 @@ func mexcGetJson(ctx model.Context, apiPath string, params url.Values) interface
 		url = fmt.Sprintf("%s?%s", url, params.Encode())
 	}
 	resp, _ := chttp.HttpGetJson(url, header)
-	return resp
+
+	var mexcResp model.MexcResp
+	cfg := &mapstructure.DecoderConfig{
+		Metadata: nil,
+		Result:   &mexcResp,
+		TagName:  "json",
+	}
+	decoder, _ := mapstructure.NewDecoder(cfg)
+	decoder.Decode(resp)
+
+	mexcAPIData := model.MexcAPIData{Payload: ""}
+	if mexcResp.Code == 200 {
+		mexcAPIData.OK = true
+		mexcAPIData.RawPayload = mexcResp.Data
+	}
+
+	return mexcAPIData
 }
 
 func buildUrl(apiPath string) string {
