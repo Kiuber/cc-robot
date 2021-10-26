@@ -24,9 +24,9 @@ func Timestamp(ctx model.Context) model.MexcAPIData {
 	return mexcGetJson(ctx, "common/timestamp", nil)
 }
 
-func Symbols(ctx model.Context) model.MexcAPIData {
+func SymbolPair(ctx model.Context) model.MexcAPIData {
 	mexcAPIData := mexcGetJson(ctx, "market/api_symbols", nil)
-	supportSymbols := new(model.SupportSymbols)
+	supportSymbols := new(model.SupportSymbolPair)
 	mapstructure.Decode(mexcAPIData.RawPayload, &supportSymbols)
 	mexcAPIData.Payload = *supportSymbols
 	return mexcAPIData

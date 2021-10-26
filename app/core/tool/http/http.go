@@ -29,6 +29,8 @@ func HttpGetJson(url string, header http.Header) (data interface{}, err error) {
 }
 
 func HttpGet(url string, header http.Header) (resp *http.Response, err error) {
+	header = mergeBasicHeader(header)
+
 	client := http.Client{}
 	req , err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -51,4 +53,24 @@ func HttpGet(url string, header http.Header) (resp *http.Response, err error) {
 // HttpPost TODO: @qingbao, waiting for completion
 func HttpPost(url, contentType string, body io.Reader) (resp *http.Response, err error) {
 	return http.Post(url, contentType, body)
+}
+
+func mergeBasicHeader(header http.Header) http.Header {
+	basicHeader := BasicHeader()
+	if header == nil {
+		return basicHeader
+	}
+
+	for key, values := range basicHeader {
+		for _, value := range values {
+			header.Add(key, value)
+		}
+	}
+	return header
+}
+
+func BasicHeader() http.Header {
+	header := http.Header{}
+	header.Add("Identity", "hi")
+	return header
 }

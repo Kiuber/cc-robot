@@ -12,7 +12,8 @@ type MexcAPIData struct {
 	RawPayload interface{}
 }
 
-type SupportSymbols struct {
-	Symbols []string `mapstructure:"symbol"`
+type SupportSymbolPair struct {
+	SymbolPairList []string `mapstructure:"symbol"`
+	SymbolPairMap map[string][]string
 }
 
