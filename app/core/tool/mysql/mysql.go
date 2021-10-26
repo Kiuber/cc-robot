@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var db *gorm.DB
+var client *gorm.DB
 
 func Setup(ctx model.Context) {
 	var dbURI string
@@ -39,22 +39,22 @@ func Setup(ctx model.Context) {
 	}
 	sqlDB, err := conn.DB()
 	if err != nil {
-		logger.Error("connect db server failed.")
+		logger.Error("connect MySQLClient server failed.")
 	}
 	sqlDB.SetMaxIdleConns(10)                   	// SetMaxIdleConns sets the maximum number of connections in the idle connection pool.
 	sqlDB.SetMaxOpenConns(100)                  	// SetMaxOpenConns sets the maximum number of open connections to the database.
 	sqlDB.SetConnMaxLifetime(time.Second * 600) 	// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
-	db = conn
+	client = conn
 }
 
-func DB(ctx model.Context) *gorm.DB {
-	if db == nil {
+func MySQLClient(ctx model.Context) *gorm.DB {
+	if client == nil {
 		Setup(ctx)
 	}
 
-	sqlDB, err := db.DB()
+	sqlDB, err := client.DB()
 	if err != nil {
-		log.Error("connect db server failed.")
+		log.Error("connect MySQLClient server failed.")
 		Setup(ctx)
 	}
 	if err := sqlDB.Ping(); err != nil {
@@ -62,5 +62,5 @@ func DB(ctx model.Context) *gorm.DB {
 		Setup(ctx)
 	}
 
-	return db
+	return client
 }
