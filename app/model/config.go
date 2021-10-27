@@ -41,6 +41,7 @@ type Api struct {
 }
 
 type Mexc struct {
-	AK string `yaml:"access_key"`
-	AS string `yaml:"access_secret"`
+	BaseURL      string `yaml:"base_url"`
+	AK      string `yaml:"access_key"`
+	AS      string `yaml:"access_secret"`
 }

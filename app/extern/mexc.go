@@ -15,8 +15,6 @@ import (
 	"time"
 )
 
-const baseUrl = "https://www.mexc.com/open/api/v2"
-
 func Ping() model.MexcAPIData {
 	return mexcGetJson("common/ping", nil)
 }
@@ -73,7 +71,7 @@ func mexcGetJson(apiPath string, params url.Values) model.MexcAPIData {
 }
 
 func buildUrl(apiPath string) string {
-	return fmt.Sprintf("%s/%s", baseUrl, apiPath)
+	return fmt.Sprintf("%s/%s", cboot.GV.Config.Api.Mexc.BaseURL, apiPath)
 }
 
 func buildHeader(params url.Values) http.Header {
