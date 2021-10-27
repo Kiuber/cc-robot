@@ -14,6 +14,7 @@ type Config struct {
 type Infra struct {
 	MySQLConfig MySQLConfig `yaml:"mysql"`
 	RedisConfig RedisConfig `yaml:"redis"`
+	EventNU EventNU `yaml:"event_notify_url"`
 }
 
 type MySQLConfig struct {
@@ -28,6 +29,10 @@ type RedisConfig struct {
 	Host	string `yaml:"host"`
 	Port	string `yaml:"port"`
 	Password	string `yaml:"password"`
+}
+
+type EventNU struct {
+	Dingtalk	string `yaml:"dingtalk"`
 }
 
 

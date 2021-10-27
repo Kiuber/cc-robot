@@ -30,7 +30,7 @@ func HandleMexcSymbolPair(ctx model.Context) {
 	oldSymbolPairCount := len(mexcSupportSymbolPair.SymbolPairList)
 	newSymbolPairCount := len(supportSymbolPair.SymbolPairList)
 	if oldSymbolPairCount > 0 && newSymbolPairCount > oldSymbolPairCount {
-		handleSymbolPairAppear(supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
+		handleSymbolPairAppear(ctx, supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
 	}
 	log.WithFields(log.Fields{
 		"oldSymbolPairCount": oldSymbolPairCount,
@@ -53,10 +53,10 @@ func HandleMexcSymbolPair(ctx model.Context) {
 	mexcSupportSymbolPair = supportSymbolPair
 }
 
-func handleSymbolPairAppear(exchange string, oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
+func handleSymbolPairAppear(ctx model.Context, exchange string, oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
 	for symbolPair := range newSupportSymbolPair.SymbolPairMap {
 		if _, ok := oldSupportSymbolPair.SymbolPairMap[symbolPair]; !ok {
-			cinfra.GiantEventText(fmt.Sprintf("%s symbol pair appear %s", exchange, symbolPair))
+			cinfra.GiantEventText(ctx, fmt.Sprintf("%s symbol pair appear %s", exchange, symbolPair))
 		}
 	}
 }
