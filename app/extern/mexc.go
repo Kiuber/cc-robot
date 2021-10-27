@@ -2,12 +2,12 @@ package mexc
 
 import (
 	chttp "cc-robot/core/tool/http"
-	"github.com/mitchellh/mapstructure"
 	"cc-robot/model"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/mitchellh/mapstructure"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -28,6 +28,7 @@ func SymbolPair(ctx model.Context) model.MexcAPIData {
 	mexcAPIData := mexcGetJson(ctx, "market/api_symbols", nil)
 	supportSymbols := new(model.SupportSymbolPair)
 	mapstructure.Decode(mexcAPIData.RawPayload, &supportSymbols)
+	supportSymbols.Exchange = "mexc"
 	mexcAPIData.Payload = *supportSymbols
 	return mexcAPIData
 }

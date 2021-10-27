@@ -15,5 +15,6 @@ type MexcAPIData struct {
 type SupportSymbolPair struct {
 	SymbolPairList []string `mapstructure:"symbol"`
 	SymbolPairMap map[string][]string
+	Exchange string
 }
 

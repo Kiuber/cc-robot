@@ -8,6 +8,7 @@ import (
 	mexc "cc-robot/extern"
 	"cc-robot/model"
 	"context"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm/clause"
 	"strings"
@@ -29,7 +30,7 @@ func HandleMexcSymbolPair(ctx model.Context) {
 	oldSymbolPairCount := len(mexcSupportSymbolPair.SymbolPairList)
 	newSymbolPairCount := len(supportSymbolPair.SymbolPairList)
 	if oldSymbolPairCount > 0 && newSymbolPairCount > oldSymbolPairCount {
-		handleSymbolPairAppear(mexcSupportSymbolPair, supportSymbolPair)
+		handleSymbolPairAppear(supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
 	}
 	log.WithFields(log.Fields{
 		"oldSymbolPairCount": oldSymbolPairCount,
@@ -37,7 +38,7 @@ func HandleMexcSymbolPair(ctx model.Context) {
 	}).Info("handleSymbolPair")
 
 	for symbolPair, symbol1And2 := range supportSymbolPair.SymbolPairMap {
-		exchangeSymbolPair := dao.ExchangeSymbolPair{ExchangeName: "mexc", SymbolPair: symbolPair, Symbol1: symbol1And2[0], Symbol2: symbol1And2[1]}
+		exchangeSymbolPair := dao.ExchangeSymbolPair{ExchangeName: supportSymbolPair.Exchange, SymbolPair: symbolPair, Symbol1: symbol1And2[0], Symbol2: symbol1And2[1]}
 
 		err := redis.RdbClient(ctx).Set(context.Background(), symbolPair, symbolPair, 0).Err()
 		if err != nil {
@@ -52,10 +53,10 @@ func HandleMexcSymbolPair(ctx model.Context) {
 	mexcSupportSymbolPair = supportSymbolPair
 }
 
-func handleSymbolPairAppear(oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
+func handleSymbolPairAppear(exchange string, oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
 	for symbolPair := range newSupportSymbolPair.SymbolPairMap {
 		if _, ok := oldSupportSymbolPair.SymbolPairMap[symbolPair]; !ok {
-			cinfra.GiantEventText("mexc symbol pair appear " + symbolPair)
+			cinfra.GiantEventText(fmt.Sprintf("%s symbol pair appear %s", exchange, symbolPair))
 		}
 	}
 }
