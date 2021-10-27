@@ -16,8 +16,8 @@ import (
 
 var mexcSupportSymbolPair model.SupportSymbolPair
 
-func HandleMexcSymbolPair(ctx model.Context) {
-	mexcAPIData := mexc.SymbolPair(ctx)
+func HandleMexcSymbolPair() {
+	mexcAPIData := mexc.SymbolPair()
 	supportSymbolPair := mexcAPIData.Payload.(model.SupportSymbolPair)
 
 	symbolPairMap := make(map[string][]string, len(supportSymbolPair.SymbolPairList))
@@ -30,7 +30,7 @@ func HandleMexcSymbolPair(ctx model.Context) {
 	oldSymbolPairCount := len(mexcSupportSymbolPair.SymbolPairList)
 	newSymbolPairCount := len(supportSymbolPair.SymbolPairList)
 	if oldSymbolPairCount > 0 && newSymbolPairCount > oldSymbolPairCount {
-		handleSymbolPairAppear(ctx, supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
+		handleSymbolPairAppear(supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
 	}
 	log.WithFields(log.Fields{
 		"oldSymbolPairCount": oldSymbolPairCount,
@@ -40,12 +40,12 @@ func HandleMexcSymbolPair(ctx model.Context) {
 	for symbolPair, symbol1And2 := range supportSymbolPair.SymbolPairMap {
 		exchangeSymbolPair := dao.ExchangeSymbolPair{ExchangeName: supportSymbolPair.Exchange, SymbolPair: symbolPair, Symbol1: symbol1And2[0], Symbol2: symbol1And2[1]}
 
-		err := redis.RdbClient(ctx).Set(context.Background(), symbolPair, symbolPair, 0).Err()
+		err := redis.RdbClient().Set(context.Background(), symbolPair, symbolPair, 0).Err()
 		if err != nil {
 			panic(err)
 		}
 
-		mysql.MySQLClient(ctx).Clauses(clause.OnConflict{
+		mysql.MySQLClient().Clauses(clause.OnConflict{
 			UpdateAll: true,
 		}).Create(&exchangeSymbolPair)
 	}
@@ -53,10 +53,10 @@ func HandleMexcSymbolPair(ctx model.Context) {
 	mexcSupportSymbolPair = supportSymbolPair
 }
 
-func handleSymbolPairAppear(ctx model.Context, exchange string, oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
+func handleSymbolPairAppear(exchange string, oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
 	for symbolPair := range newSupportSymbolPair.SymbolPairMap {
 		if _, ok := oldSupportSymbolPair.SymbolPairMap[symbolPair]; !ok {
-			cinfra.GiantEventText(ctx, fmt.Sprintf("%s symbol pair appear %s", exchange, symbolPair))
+			cinfra.GiantEventText(fmt.Sprintf("%s symbol pair appear %s", exchange, symbolPair))
 		}
 	}
 }

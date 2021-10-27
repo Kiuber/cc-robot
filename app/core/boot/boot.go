@@ -3,7 +3,6 @@ package cboot
 import (
 	cyaml "cc-robot/core/tool/yaml"
 	"cc-robot/model"
-	"cc-robot/service"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net"
@@ -16,13 +15,11 @@ const (
 	ListenType = "tcp"
 )
 
+var GV model.GlobalVariable
+
 func Init() {
 	initLog()
-	ctx := initContext()
-
-	service.RunApp(ctx)
-
-	startListenTcpService()
+	initGV()
 }
 
 func initLog() {
@@ -33,18 +30,23 @@ func initLog() {
 	log.SetFormatter(formatter)
 }
 
-func initContext() *model.Context {
-	ctx := &model.Context{
+func initGV() {
+	gv := &model.GlobalVariable{
 		IsDev: true,
 	}
 
 	infra := &model.Infra{}
+	api := &model.Api{}
 	cyaml.LoadConfig("infra.yaml", infra)
-	ctx.Config.Infra = *infra
-	return ctx
+	cyaml.LoadConfig("api.yaml", api)
+	gv.Config.Infra = *infra
+	gv.Config.Api = *api
+	GV = *gv
+
+	log.WithFields(log.Fields{"global variable": GV}).Info("initGV")
 }
 
-func startListenTcpService() {
+func StartListenTcpService() {
 	listener, err := net.Listen(ListenType, fmt.Sprintf("%s:%s", ListenHost, ListenPort))
 	if err != nil {
 		panic(err)

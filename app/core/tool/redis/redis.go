@@ -1,25 +1,25 @@
 package redis
 
 import (
-	"cc-robot/model"
+	cboot "cc-robot/core/boot"
 	"fmt"
 	"github.com/go-redis/redis/v8"
 )
 
 var client *redis.Client
 
-func Setup(ctx model.Context) {
+func Setup() {
 	c := redis.NewClient(&redis.Options {
-		Addr:	  fmt.Sprintf("%s:%s", ctx.Config.Infra.RedisConfig.Host, ctx.Config.Infra.RedisConfig.Port),
-		Password: ctx.Config.Infra.RedisConfig.Password,
+		Addr:	  fmt.Sprintf("%s:%s", cboot.GV.Config.Infra.RedisConfig.Host, cboot.GV.Config.Infra.RedisConfig.Port),
+		Password: cboot.GV.Config.Infra.RedisConfig.Password,
 		DB:		  0,
 	})
 	client = c
 }
 
-func RdbClient(ctx model.Context) *redis.Client {
+func RdbClient() *redis.Client {
 	if client == nil {
-		Setup(ctx)
+		Setup()
 	}
 	return client
 }

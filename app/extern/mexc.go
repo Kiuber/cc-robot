@@ -1,6 +1,7 @@
 package mexc
 
 import (
+	cboot "cc-robot/core/boot"
 	chttp "cc-robot/core/tool/http"
 	"cc-robot/model"
 	"crypto/hmac"
@@ -16,16 +17,16 @@ import (
 
 const baseUrl = "https://www.mexc.com/open/api/v2"
 
-func Ping(ctx model.Context) model.MexcAPIData {
-	return mexcGetJson(ctx, "common/ping", nil)
+func Ping() model.MexcAPIData {
+	return mexcGetJson("common/ping", nil)
 }
 
-func Timestamp(ctx model.Context) model.MexcAPIData {
-	return mexcGetJson(ctx, "common/timestamp", nil)
+func Timestamp() model.MexcAPIData {
+	return mexcGetJson("common/timestamp", nil)
 }
 
-func SymbolPair(ctx model.Context) model.MexcAPIData {
-	mexcAPIData := mexcGetJson(ctx, "market/api_symbols", nil)
+func SymbolPair() model.MexcAPIData {
+	mexcAPIData := mexcGetJson("market/api_symbols", nil)
 	supportSymbols := new(model.SupportSymbolPair)
 	mapstructure.Decode(mexcAPIData.RawPayload, &supportSymbols)
 	supportSymbols.Exchange = "mexc"
@@ -33,20 +34,20 @@ func SymbolPair(ctx model.Context) model.MexcAPIData {
 	return mexcAPIData
 }
 
-func Depth(ctx model.Context, symbol string, depth string) model.MexcAPIData {
+func Depth(symbol string, depth string) model.MexcAPIData {
 	params := url.Values{}
 	params.Set("symbol", symbol)
 	params.Set("depth", depth)
-	return mexcGetJson(ctx, "market/depth", params)
+	return mexcGetJson("market/depth", params)
 }
 
-func AccountInfo(ctx model.Context) model.MexcAPIData {
-	return mexcGetJson(ctx, "account/info", nil)
+func AccountInfo() model.MexcAPIData {
+	return mexcGetJson("account/info", nil)
 }
 
-func mexcGetJson(ctx model.Context, apiPath string, params url.Values) model.MexcAPIData {
+func mexcGetJson(apiPath string, params url.Values) model.MexcAPIData {
 	url := buildUrl(apiPath)
-	header := buildHeader(ctx, params)
+	header := buildHeader(params)
 
 	if params != nil {
 		url = fmt.Sprintf("%s?%s", url, params.Encode())
@@ -75,22 +76,22 @@ func buildUrl(apiPath string) string {
 	return fmt.Sprintf("%s/%s", baseUrl, apiPath)
 }
 
-func buildHeader(ctx model.Context, params url.Values) http.Header {
+func buildHeader(params url.Values) http.Header {
 	requestTime := strconv.FormatInt(time.Now().Unix() * 1000, 10)
 	header := http.Header{}
 	header.Add("Content-Type", "application/json")
-	header.Add("ApiKey", ctx.Config.Api.Mexc.AK)
+	header.Add("ApiKey", cboot.GV.Config.Api.Mexc.AK)
 	header.Add("Request-Time", requestTime)
 
 	if params == nil {
-		str := fmt.Sprintf("%s%s%s", ctx.Config.Api.Mexc.AK, requestTime, params.Encode())
-		header.Add("Signature", buildSignature(ctx, str))
+		str := fmt.Sprintf("%s%s%s", cboot.GV.Config.Api.Mexc.AK, requestTime, params.Encode())
+		header.Add("Signature", buildSignature(str))
 	}
 	return header
 }
 
-func buildSignature(ctx model.Context, data string) string {
-	h := hmac.New(sha256.New, []byte(ctx.Config.Api.Mexc.AS))
+func buildSignature(data string) string {
+	h := hmac.New(sha256.New, []byte(cboot.GV.Config.Api.Mexc.AS))
 	h.Write([]byte(data))
 	sha := hex.EncodeToString(h.Sum(nil))
 	return sha

@@ -1,7 +1,7 @@
 package model
 
 
-type Context struct {
+type GlobalVariable struct {
 	IsDev bool
 	Config Config
 }

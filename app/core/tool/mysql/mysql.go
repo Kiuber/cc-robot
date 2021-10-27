@@ -1,7 +1,7 @@
 package mysql
 
 import (
-	"cc-robot/model"
+	cboot "cc-robot/core/boot"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -12,25 +12,26 @@ import (
 
 var client *gorm.DB
 
-func Setup(ctx model.Context) {
+func Setup() {
 	var dbURI string
 	var dialector gorm.Dialector
 	dbURI = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local",
-		ctx.Config.Infra.MySQLConfig.User,
-		ctx.Config.Infra.MySQLConfig.Password,
-		ctx.Config.Infra.MySQLConfig.Host,
-		ctx.Config.Infra.MySQLConfig.Port,
-		ctx.Config.Infra.MySQLConfig.Name)
-	dialector = mysql.New(mysql.Config{
+		cboot.GV.Config.Infra.MySQLConfig.User,
+		cboot.GV.Config.Infra.MySQLConfig.Password,
+		cboot.GV.Config.Infra.MySQLConfig.Host,
+		cboot.GV.Config.Infra.MySQLConfig.Port,
+		cboot.GV.Config.Infra.MySQLConfig.Name)
+	config := mysql.Config{
 		DSN:                       dbURI, // data source name
 		DefaultStringSize:         256,   // default size for string fields
 		DisableDatetimePrecision:  true,  // disable datetime precision, which not supported before MySQL 5.6
 		DontSupportRenameIndex:    true,  // drop & create when rename index, rename index not supported before MySQL 5.7, MariaDB
 		DontSupportRenameColumn:   true,  // `change` when rename column, rename column not supported before MySQL 8, MariaDB
 		SkipInitializeWithVersion: false, // auto configure based on currently MySQL version
-	})
+	}
+	dialector = mysql.New(config)
 
-	logger := log.WithFields(log.Fields{"dialector": dialector})
+	logger := log.WithFields(log.Fields{"mysql config": config})
 
 	conn, err := gorm.Open(dialector, &gorm.Config{})
 	logger.Info("start connect")
@@ -47,19 +48,19 @@ func Setup(ctx model.Context) {
 	client = conn
 }
 
-func MySQLClient(ctx model.Context) *gorm.DB {
+func MySQLClient() *gorm.DB {
 	if client == nil {
-		Setup(ctx)
+		Setup()
 	}
 
 	sqlDB, err := client.DB()
 	if err != nil {
 		log.Error("connect MySQLClient server failed.")
-		Setup(ctx)
+		Setup()
 	}
 	if err := sqlDB.Ping(); err != nil {
 		sqlDB.Close()
-		Setup(ctx)
+		Setup()
 	}
 
 	return client
