@@ -10,12 +10,6 @@ import (
 	"net/http"
 )
 
-const (
-	ListenHost  = "0"
-	ListenPort = "3333"
-	ListenType = "tcp"
-)
-
 var GV model.GlobalVariable
 var env *string
 var isDev bool
@@ -67,7 +61,7 @@ func initGV() {
 }
 
 func StartListenTcpService() {
-	listener, err := net.Listen(ListenType, fmt.Sprintf("%s:%s", ListenHost, ListenPort))
+	listener, err := net.Listen(model.AppListenType, fmt.Sprintf("%s:%s", model.AppListenHost, model.AppListenPort))
 	if err != nil {
 		panic(err)
 	}
