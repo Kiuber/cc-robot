@@ -6,12 +6,12 @@ import (
 )
 
 func RunApp() {
+	log.Info("RunApp")
 	initLogic()
 }
 
 func initLogic() {
 	for {
-		log.Info("RunApp")
 		HandleMexcSymbolPair()
 		time.Sleep(time.Second * 10)
 	}
