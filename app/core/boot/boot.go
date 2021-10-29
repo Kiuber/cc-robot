@@ -66,7 +66,7 @@ func StartListenTcpService() {
 		panic(err)
 	}
 
-	log.WithFields(log.Fields{"addr": listener.Addr().String()}).Info("listening on")
+	log.WithFields(log.Fields{"addr": listener.Addr().String()}).Info("StartListenTcpService")
 
 	http.HandleFunc("/check-health", httpHandler)
 	panic(http.Serve(listener, nil))

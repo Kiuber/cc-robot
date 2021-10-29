@@ -13,6 +13,6 @@ func initLogic() {
 	for {
 		log.Info("RunApp")
 		HandleMexcSymbolPair()
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 10)
 	}
 }

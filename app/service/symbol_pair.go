@@ -35,7 +35,7 @@ func HandleMexcSymbolPair() {
 	log.WithFields(log.Fields{
 		"oldSymbolPairCount": oldSymbolPairCount,
 		"newSymbolPairCount": newSymbolPairCount,
-	}).Debug("handleSymbolPair")
+	}).Info("handleSymbolPair")
 
 	for symbolPair, symbol1And2 := range supportSymbolPair.SymbolPairMap {
 		exchangeSymbolPair := dao.ExchangeSymbolPair{ExchangeName: supportSymbolPair.Exchange, SymbolPair: symbolPair, Symbol1: symbol1And2[0], Symbol2: symbol1And2[1]}
