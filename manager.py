@@ -9,6 +9,7 @@ from cpbox.tool import template
 from cpbox.tool import utils
 
 APP_NAME = 'cc-robot'
+docker_image = APP_NAME
 
 
 class App(DevOpsApp):
@@ -19,8 +20,19 @@ class App(DevOpsApp):
     def run(self):
         self._run_for_dev()
 
-    def run_as_service(self):
-        self.shell_run('docker run -d --name %s %s' % (APP_NAME, APP_NAME))
+    def restart_app_container(self):
+        container = '%s-%s' % (APP_NAME, 'prod')
+        self.stop_container(container, timeout=1)
+        self.remove_container(container, force=True)
+
+        volumes = {
+            '/etc/resolv.conf': '/etc/resolv.conf',
+        }
+
+        args = dockerutil.base_docker_args(container_name=container, volumes=volumes)
+        cmd_data = {'image': docker_image, 'args': args}
+        cmd = template.render_str('docker run -d --restart always {{ args }} {{ image }}', cmd_data)
+        self.shell_run(cmd)
 
     def check_run(self):
         self.shell_run('curl 0:3333/check-health')
@@ -31,7 +43,7 @@ class App(DevOpsApp):
             return
 
         self.shell_run('cd app && go build main.go')
-        self.shell_run('docker build -t %s .' % APP_NAME)
+        self.shell_run('docker build -t %s .' % docker_image)
 
     def _run_for_dev(self):
         self.shell_run('cd app && go run main.go -env=dev')
