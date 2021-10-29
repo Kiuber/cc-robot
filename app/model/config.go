@@ -14,7 +14,7 @@ type Config struct {
 type Infra struct {
 	MySQLConfig MySQLConfig `yaml:"mysql"`
 	RedisConfig RedisConfig `yaml:"redis"`
-	EventNU EventNU `yaml:"event_notify_url"`
+	EventNU EventNU `yaml:"event_notify"`
 }
 
 type MySQLConfig struct {
@@ -32,8 +32,13 @@ type RedisConfig struct {
 }
 
 type EventNU struct {
-	Dingtalk	string `yaml:"dingtalk"`
+	URL string `yaml:"url"`
 }
+
+const (
+	EventRobotTypeWechat string = "wechat"
+	EventRobotTypeDingtalk string = "dingtalk"
+)
 
 
 type Api struct {
