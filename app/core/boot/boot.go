@@ -3,6 +3,7 @@ package cboot
 import (
 	cyaml "cc-robot/core/tool/yaml"
 	"cc-robot/model"
+	"flag"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net"
@@ -16,7 +17,13 @@ const (
 )
 
 var GV model.GlobalVariable
+var env *string
 var isDev bool
+
+func PrepareCmdArgs() {
+	env = flag.String("env", "dev", "runtime environment")
+	flag.Parse()
+}
 
 func Init() {
 	initEnv()
@@ -25,8 +32,7 @@ func Init() {
 }
 
 func initEnv() {
-	// TODO: @qingbao, env from run args
-	isDev = true
+	isDev = *env == model.EnvDev
 }
 
 func initLog() {
@@ -35,10 +41,17 @@ func initLog() {
 		FullTimestamp: true,
 	}
 	log.SetFormatter(formatter)
+
+	logLevel := log.InfoLevel
+	if isDev {
+		logLevel = log.DebugLevel
+	}
+	log.SetLevel(logLevel)
 }
 
 func initGV() {
 	gv := &model.GlobalVariable{
+		Env: *env,
 		IsDev: isDev,
 	}
 

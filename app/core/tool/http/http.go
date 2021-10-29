@@ -23,7 +23,7 @@ func HttpGetJson(url string, header http.Header) (data interface{}, err error) {
 
 	log.WithFields(log.Fields{
 		"bodyString": bodyString,
-	}).Info("HttpGetJson, unmarshal")
+	}).Debug("HttpGetJson, unmarshal")
 
 	return data, err
 }

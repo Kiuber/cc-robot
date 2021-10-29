@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	cboot.PrepareCmdArgs()
 	cboot.Init()
 	service.RunApp()
 	cboot.StartListenTcpService()

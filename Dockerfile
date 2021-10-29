@@ -8,4 +8,4 @@ RUN chmod +x $WORKDIR/main
 ADD app/config   $WORKDIR/config
 
 WORKDIR $WORKDIR
-CMD ./main
+CMD ./main -env=prod

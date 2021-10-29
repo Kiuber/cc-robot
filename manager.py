@@ -17,7 +17,7 @@ class App(DevOpsApp):
         DevOpsApp.__init__(self, APP_NAME, **kwargs)
 
     def run(self):
-        self._run_for_debug()
+        self._run_for_dev()
 
     def run_as_service(self):
         self.shell_run('docker run -d --name %s %s' % (APP_NAME, APP_NAME))
@@ -33,8 +33,8 @@ class App(DevOpsApp):
         self.shell_run('cd app && go build main.go')
         self.shell_run('docker build -t %s .' % APP_NAME)
 
-    def _run_for_debug(self):
-        self.shell_run('cd app && go run main.go')
+    def _run_for_dev(self):
+        self.shell_run('cd app && go run main.go -env=dev')
 
 
 if __name__ == '__main__':

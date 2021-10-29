@@ -2,6 +2,7 @@ package model
 
 
 type GlobalVariable struct {
+	Env string
 	IsDev bool
 	Config Config
 }
