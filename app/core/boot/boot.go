@@ -16,10 +16,17 @@ const (
 )
 
 var GV model.GlobalVariable
+var isDev bool
 
 func Init() {
+	initEnv()
 	initLog()
 	initGV()
+}
+
+func initEnv() {
+	// TODO: @qingbao, env from run args
+	isDev = true
 }
 
 func initLog() {
@@ -32,7 +39,7 @@ func initLog() {
 
 func initGV() {
 	gv := &model.GlobalVariable{
-		IsDev: true,
+		IsDev: isDev,
 	}
 
 	infra := &model.Infra{}

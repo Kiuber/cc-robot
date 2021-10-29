@@ -17,7 +17,7 @@ import (
 var mexcSupportSymbolPair model.SupportSymbolPair
 
 func HandleMexcSymbolPair() {
-	mexcAPIData := mexc.SymbolPair()
+	mexcAPIData := mexc.SupportSymbolPair()
 	supportSymbolPair := mexcAPIData.Payload.(model.SupportSymbolPair)
 
 	symbolPairMap := make(map[string][]string, len(supportSymbolPair.SymbolPairList))
@@ -35,7 +35,7 @@ func HandleMexcSymbolPair() {
 	log.WithFields(log.Fields{
 		"oldSymbolPairCount": oldSymbolPairCount,
 		"newSymbolPairCount": newSymbolPairCount,
-	}).Info("handleSymbolPair")
+	}).Debug("handleSymbolPair")
 
 	for symbolPair, symbol1And2 := range supportSymbolPair.SymbolPairMap {
 		exchangeSymbolPair := dao.ExchangeSymbolPair{ExchangeName: supportSymbolPair.Exchange, SymbolPair: symbolPair, Symbol1: symbol1And2[0], Symbol2: symbol1And2[1]}

@@ -40,7 +40,7 @@ func HttpGet(url string, header http.Header) (resp *http.Response, err error) {
 	log.WithFields(log.Fields{
 		"url": url,
 		"header": header,
-	}).Info("HttpGet, request message")
+	}).Debug("HttpGet, request message")
 
 	req.Header = header
 	resp, err = client.Do(req)
