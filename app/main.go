@@ -8,6 +8,6 @@ import (
 func main() {
 	cboot.PrepareCmdArgs()
 	cboot.Init()
+	go cboot.StartListenTcpService()
 	service.RunApp()
-	cboot.StartListenTcpService()
 }

@@ -30,7 +30,7 @@ func initEnv() {
 }
 
 func initLog() {
-	log.SetReportCaller(true)
+	// log.SetReportCaller(true)
 	formatter := &log.TextFormatter{
 		FullTimestamp: true,
 	}

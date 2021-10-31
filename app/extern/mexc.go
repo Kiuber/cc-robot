@@ -25,6 +25,7 @@ func Timestamp() model.MexcAPIData {
 
 func SupportSymbolPair() model.MexcAPIData {
 	mexcAPIData := mexcGetJson("market/api_symbols", nil)
+
 	supportSymbols := new(model.SupportSymbolPair)
 	mapstructure.Decode(mexcAPIData.RawPayload, &supportSymbols)
 	supportSymbols.Exchange = "mexc"
@@ -34,6 +35,7 @@ func SupportSymbolPair() model.MexcAPIData {
 
 func SymbolPairInfoList() model.MexcAPIData {
 	mexcAPIData := mexcGetJson("market/symbols", nil)
+
 	SymbolList := new(model.SymbolPairInfoList)
 	mapstructure.Decode(mexcAPIData.RawPayload, &SymbolList)
 	mexcAPIData.Payload = *SymbolList
@@ -44,17 +46,23 @@ func SymbolPairTickerInfo(symbolPair string) model.MexcAPIData {
 	params := url.Values{}
 	params.Set("symbol", symbolPair)
 	mexcAPIData := mexcGetJson("market/ticker", params)
+
 	symbolPairTickerInfo := &model.SymbolPairTickerInfo{}
 	mapstructure.Decode(mexcAPIData.RawPayload, symbolPairTickerInfo)
 	mexcAPIData.Payload = *symbolPairTickerInfo
 	return mexcAPIData
 }
 
-func Depth(symbol string, depth string) model.MexcAPIData {
+func DepthInfo(symbol string, depth string) model.MexcAPIData {
 	params := url.Values{}
 	params.Set("symbol", symbol)
 	params.Set("depth", depth)
-	return mexcGetJson("market/depth", params)
+	mexcAPIData := mexcGetJson("market/depth", params)
+
+	depthInfo := &model.DepthInfo{}
+	mapstructure.Decode(mexcAPIData.RawPayload, depthInfo)
+	mexcAPIData.Payload = *depthInfo
+	return mexcAPIData
 }
 
 func AccountInfo() model.MexcAPIData {

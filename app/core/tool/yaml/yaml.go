@@ -16,7 +16,6 @@ func LoadConfig(configFname string, out interface{}) {
 		logger.Error("LoadConfig ReadFile err")
 	}
 
-	logger.Error("LoadConfig test")
 	err = yaml.Unmarshal(file, out)
 	if err != nil {
 		logger.Error("LoadConfig Unmarshal err")

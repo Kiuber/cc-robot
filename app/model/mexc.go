@@ -18,6 +18,11 @@ type SupportSymbolPair struct {
 	Exchange string
 }
 
+type AppearSymbolPair struct {
+	SymbolPair string
+	Exchange string
+}
+
 type SymbolPairInfoList []struct {
 	Symbol          string `mapstructure:"symbol"`
 	State           string `mapstructure:"state"`
@@ -43,6 +48,17 @@ type SymbolPairTickerInfo []struct {
 	Last string `json:"last"`
 	Time int64 `json:"time"`
 	ChangeRate string `json:"change_rate"`
+}
+
+type DepthInfo struct {
+	Asks []struct {
+		Price string `json:"price"`
+		Quantity string `json:"quantity"`
+	} `json:"asks"`
+	Bids []struct {
+		Price string `json:"price"`
+		Quantity string `json:"quantity"`
+	} `json:"bids"`
 }
 
 type AccountInfo map[string]struct {

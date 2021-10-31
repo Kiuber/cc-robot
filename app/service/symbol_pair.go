@@ -1,14 +1,12 @@
 package service
 
 import (
-	cinfra "cc-robot/core/tool/infra"
 	"cc-robot/core/tool/mysql"
 	"cc-robot/core/tool/redis"
 	"cc-robot/dao"
 	mexc "cc-robot/extern"
 	"cc-robot/model"
 	"context"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm/clause"
 	"strings"
@@ -16,7 +14,14 @@ import (
 
 var mexcSupportSymbolPair model.SupportSymbolPair
 
-func HandleMexcSymbolPair() {
+
+func(app *App) HandleMexcSymbolPair() {
+	for {
+		handleMexcSymbolPair(*app)
+	}
+}
+
+func handleMexcSymbolPair(app App) {
 	mexcAPIData := mexc.SupportSymbolPair()
 	supportSymbolPair := mexcAPIData.Payload.(model.SupportSymbolPair)
 
@@ -30,7 +35,7 @@ func HandleMexcSymbolPair() {
 	oldSymbolPairCount := len(mexcSupportSymbolPair.SymbolPairList)
 	newSymbolPairCount := len(supportSymbolPair.SymbolPairList)
 	if oldSymbolPairCount > 0 && newSymbolPairCount > oldSymbolPairCount {
-		handleSymbolPairAppear(supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
+		handleSymbolPairAppear(app, supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
 	}
 	log.WithFields(log.Fields{
 		"oldSymbolPairCount": oldSymbolPairCount,
@@ -53,10 +58,10 @@ func HandleMexcSymbolPair() {
 	mexcSupportSymbolPair = supportSymbolPair
 }
 
-func handleSymbolPairAppear(exchange string, oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
+func handleSymbolPairAppear(app App, exchange string, oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
 	for symbolPair := range newSupportSymbolPair.SymbolPairMap {
 		if _, ok := oldSupportSymbolPair.SymbolPairMap[symbolPair]; !ok {
-			cinfra.GiantEventText(fmt.Sprintf("%s symbol pair appear %s", exchange, symbolPair))
+			app.symbolPairCh <- model.AppearSymbolPair{SymbolPair: symbolPair, Exchange: exchange}
 		}
 	}
 }
