@@ -6,7 +6,7 @@ import (
 )
 
 func RunApp() {
-	log.Info("RunApp")
+	log.Info("run app")
 	initLogic()
 }
 
