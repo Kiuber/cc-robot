@@ -56,9 +56,9 @@ func SymbolPairTickerInfo(symbolPair string) model.MexcAPIData {
 	return mexcAPIData
 }
 
-func DepthInfo(symbol string, depth string) model.MexcAPIData {
+func DepthInfo(symbolPair string, depth string) model.MexcAPIData {
 	params := url.Values{}
-	params.Set("symbol", symbol)
+	params.Set("symbol", symbolPair)
 	params.Set("depth", depth)
 	mexcAPIData := mexcGetJson("market/depth", params)
 
@@ -74,10 +74,21 @@ func CreateOrder(order model.Order) model.MexcAPIData {
 	}
 	json, _ := json.Marshal(order)
 	mexcAPIData := mexcPostJson("order/place", json)
+	return mexcAPIData
+}
 
-	accountInfo := new(model.AccountInfo)
-	mapstructure.Decode(mexcAPIData.RawPayload, &accountInfo)
-	mexcAPIData.Payload = *accountInfo
+func OrderList(symbolPair string, tradeType string, states string, limit string, startTime string) model.MexcAPIData {
+	params := url.Values{}
+	params.Set("symbol", symbolPair)
+	params.Set("trade_type", tradeType)
+	params.Set("states", states)
+	params.Set("limit", limit)
+	params.Set("start_time", startTime)
+	mexcAPIData := mexcGetJson("order/list", params)
+
+	orderList := new(model.OrderList)
+	mapstructure.Decode(mexcAPIData.RawPayload, &orderList)
+	mexcAPIData.Payload = *orderList
 	return mexcAPIData
 }
 
@@ -85,10 +96,6 @@ func CancelOrder(symbolPair string) model.MexcAPIData {
 	params := url.Values{}
 	params.Set("symbol", symbolPair)
 	mexcAPIData := mexcDeleteJson("order/cancel_by_symbol", params)
-
-	accountInfo := new(model.AccountInfo)
-	mapstructure.Decode(mexcAPIData.RawPayload, &accountInfo)
-	mexcAPIData.Payload = *accountInfo
 	return mexcAPIData
 }
 

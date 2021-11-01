@@ -1,5 +1,7 @@
 package model
 
+import "math/big"
+
 type MexcResp struct {
 	Code	int
 	Data	interface{}
@@ -24,6 +26,11 @@ type AppearSymbolPair struct {
 	Exchange string
 }
 
+type SymbolPairBetterPrice struct {
+	AppearSymbolPair AppearSymbolPair
+	LowestOfAskPrice *big.Float
+}
+
 type SymbolPairInfoList []struct {
 	Symbol          string `mapstructure:"symbol"`
 	State           string `mapstructure:"state"`
@@ -39,7 +46,7 @@ type SymbolPairInfoList []struct {
 }
 
 type SymbolPairTickerInfo []struct {
-	Symbol string `json:"symbol"`
+	SymbolPair string `json:"symbol"`
 	Volume string `json:"volume"`
 	High string `json:"high"`
 	Low string `json:"low"`
@@ -69,6 +76,17 @@ type Order struct {
 	TradeType string `json:"trade_type"`
 	OrderType string `json:"order_type"`
 	ClientOrderId string `json:"client_order_id"`
+}
+
+type OrderList []struct {
+	ID string `json:"id"`
+	SymbolPair string `json:"symbol"`
+	Price string `json:"price"`
+	Quantity string `json:"quantity"`
+	State string `json:"state"`
+	Type string `json:"type"`
+	DealQuantity string `json:"deal_quantity"`
+	DealAmount string `json:"deal_amount"`
 }
 
 type AccountInfo map[string]struct {

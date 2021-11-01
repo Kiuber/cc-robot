@@ -78,8 +78,17 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 	if err != nil {
 		return
 	}
-
 	lowestOfAskPrice := big.NewFloat(float)
+
+	app.orderManagerCh <- model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
+}
+
+func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice) {
+	// TODO: @qingbao, states
+	states := ""
+	mexc.OrderList(symbolPairBetterPrice.AppearSymbolPair.SymbolPair, "BID", states, "1000", "")
+
+	lowestOfAskPrice := symbolPairBetterPrice.LowestOfAskPrice
 	defaultBidUSDT := big.NewFloat(6)
 	quantity := big.NewFloat(0)
 
@@ -89,17 +98,18 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 	quantity.Quo(defaultBidUSDT, testBidPrice)
 
 	log.WithFields(log.Fields{
-		"symbol":         appearSymbolPair.SymbolPair,
+		"symbol":         symbolPairBetterPrice.AppearSymbolPair.SymbolPair,
 		"lowest_price":   lowestOfAskPrice,
 		"test_ask_price": testBidPrice,
 	}).Info("symbol lowest price")
 
 	mexc.CreateOrder(model.Order{
-		SymbolPair:    appearSymbolPair.SymbolPair,
+		SymbolPair:    symbolPairBetterPrice.AppearSymbolPair.SymbolPair,
 		Price:         testBidPrice.String(),
 		Quantity:      quantity.String(),
 		TradeType:     "BID",
 		OrderType:     "LIMIT_ORDER",
 		ClientOrderId: cid.UniuqeId(),
 	})
+	return
 }

@@ -99,7 +99,7 @@ func jsonifyResp(resp *http.Response) (data interface{}, err error) {
 
 	log.WithFields(log.Fields{
 		"bodyString": bodyString,
-	}).Debug("HttpPostJson, unmarshal")
+	}).Trace("jsonifyResp, unmarshal")
 	return data, err
 }
 
