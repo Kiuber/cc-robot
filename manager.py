@@ -18,6 +18,7 @@ class App(DevOpsApp):
         DevOpsApp.__init__(self, APP_NAME, **kwargs)
 
     def run(self):
+        self._prepare_runtime('dev')
         self._run_for_dev()
 
     def restart_app_container(self):
@@ -42,12 +43,19 @@ class App(DevOpsApp):
             self.logger.error('build must be on linux system')
             return
 
+        self._prepare_runtime('prod')
         self.shell_run('cd app && go build main.go')
         self.shell_run('docker build -t %s .' % docker_image)
 
     def _run_for_dev(self):
         self.shell_run('cd app && go run main.go -env=dev')
 
+    def _prepare_runtime(self, env):
+        self._prepare_runtime_config('api.yaml', env)
+
+    def _prepare_runtime_config(self, name, env):
+        names = name.split('.')
+        self.shell_run('cp app/config/%s.%s.%s app/config/%s' % (names[0], env, names[1], name))
 
 if __name__ == '__main__':
     common_args_option = {
