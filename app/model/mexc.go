@@ -20,6 +20,7 @@ type SupportSymbolPair struct {
 
 type AppearSymbolPair struct {
 	SymbolPair string
+	Symbol1And2 []string
 	Exchange string
 }
 
@@ -59,6 +60,15 @@ type DepthInfo struct {
 		Price string `json:"price"`
 		Quantity string `json:"quantity"`
 	} `json:"bids"`
+}
+
+type Order struct {
+	SymbolPair string `json:"symbol"`
+	Price string `json:"price"`
+	Quantity string `json:"quantity"`
+	TradeType string `json:"trade_type"`
+	OrderType string `json:"order_type"`
+	ClientOrderId string `json:"client_order_id"`
 }
 
 type AccountInfo map[string]struct {

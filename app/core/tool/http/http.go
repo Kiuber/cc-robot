@@ -6,10 +6,86 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 )
 
 func HttpGetJson(url string, header http.Header) (data interface{}, err error) {
-	resp, err := HttpGet(url, header)
+	resp, err := httpGet(url, header)
+	return jsonifyResp(resp)
+}
+
+func HttpPostJson(url string, header http.Header, body io.Reader) (data interface{}, err error) {
+	resp, err := httpPost(url, header, body)
+	return jsonifyResp(resp)
+}
+
+func HttpDeleteJson(url string, header http.Header, body io.Reader) (data interface{}, err error) {
+	resp, err := httpDelete(url, header, body)
+	return jsonifyResp(resp)
+}
+
+func httpGet(url string, header http.Header) (resp *http.Response, err error) {
+	req, err := buildRequest("GET", url, header, nil)
+	resp, err = doRequest(req)
+	return resp, err
+}
+
+func httpPost(url string, header http.Header, body io.Reader) (resp *http.Response, err error) {
+	req, err := buildRequest("POST", url, header, body)
+	resp, err = doRequest(req)
+	return resp, err
+}
+
+func httpDelete(url string, header http.Header, body io.Reader) (resp *http.Response, err error) {
+	req, err := buildRequest("DELETE", url, header, body)
+	resp, err = doRequest(req)
+	return resp, err
+}
+
+func buildRequest(method string, url string, header http.Header, body io.Reader) (resp *http.Request, err error) {
+	req , err := http.NewRequest(method, url, body)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("new request failed")
+	}
+	req.Header = mergeBasicHeader(req, header)
+	return req, nil
+}
+
+func doRequest(req *http.Request) (resp *http.Response, err error) {
+	logger := log.WithFields(log.Fields{
+		"method": req.Method,
+		"url": req.URL,
+		"header": req.Header,
+		"data": req.Body,
+	})
+	logger.Info("request info")
+
+	client := http.Client{}
+	resp, err = client.Do(req)
+	if err != nil {
+		logger.WithFields(log.Fields{
+			"err": err,
+		}).Error("request failed")
+	}
+
+	return resp, err
+}
+
+func mergeBasicHeader(req *http.Request, header http.Header) http.Header {
+	basicHeader := basicHeader()
+	if header == nil {
+		return basicHeader
+	}
+
+	for key, values := range basicHeader {
+		for _, value := range values {
+			header.Add(key, value)
+		}
+	}
+	return header
+}
+
+func jsonifyResp(resp *http.Response) (data interface{}, err error) {
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -23,53 +99,13 @@ func HttpGetJson(url string, header http.Header) (data interface{}, err error) {
 
 	log.WithFields(log.Fields{
 		"bodyString": bodyString,
-	}).Debug("HttpGetJson, unmarshal")
-
+	}).Debug("HttpPostJson, unmarshal")
 	return data, err
 }
 
-func HttpGet(url string, header http.Header) (resp *http.Response, err error) {
-	header = mergeBasicHeader(header)
-
-	client := http.Client{}
-	req , err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("HttpGetJson, new request fail")
-	}
-
-	log.WithFields(log.Fields{
-		"url": url,
-	}).Info("HttpGet, request message")
-
-	req.Header = header
-	resp, err = client.Do(req)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("HttpGetJson, new request do fail")
-	}
-	return resp, err
-}
-
-// HttpPost TODO: @qingbao, waiting for completion
-func HttpPost(url, contentType string, body io.Reader) (resp *http.Response, err error) {
-	return http.Post(url, contentType, body)
-}
-
-func mergeBasicHeader(header http.Header) http.Header {
-	basicHeader := BasicHeader()
-	if header == nil {
-		return basicHeader
-	}
-
-	for key, values := range basicHeader {
-		for _, value := range values {
-			header.Add(key, value)
-		}
-	}
-	return header
-}
-
-func BasicHeader() http.Header {
+func basicHeader() http.Header {
+	hostname, _ := os.Hostname()
 	header := http.Header{}
-	header.Add("Identity", "hi")
+	header.Set("Extra-Request-Hostname", hostname)
 	return header
 }

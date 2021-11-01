@@ -1,12 +1,14 @@
 package mexc
 
 import (
+	"bytes"
 	cboot "cc-robot/core/boot"
 	chttp "cc-robot/core/tool/http"
 	"cc-robot/model"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
@@ -66,6 +68,27 @@ func DepthInfo(symbol string, depth string) model.MexcAPIData {
 	return mexcAPIData
 }
 
+func CreateOrder(order model.Order) model.MexcAPIData {
+	json, _ := json.Marshal(order)
+	mexcAPIData := mexcPostJson("order/place", json)
+
+	accountInfo := new(model.AccountInfo)
+	mapstructure.Decode(mexcAPIData.RawPayload, &accountInfo)
+	mexcAPIData.Payload = *accountInfo
+	return mexcAPIData
+}
+
+func CancelOrder(symbolPair string) model.MexcAPIData {
+	params := url.Values{}
+	params.Set("symbol", symbolPair)
+	mexcAPIData := mexcDeleteJson("order/cancel_by_symbol", params)
+
+	accountInfo := new(model.AccountInfo)
+	mapstructure.Decode(mexcAPIData.RawPayload, &accountInfo)
+	mexcAPIData.Payload = *accountInfo
+	return mexcAPIData
+}
+
 func AccountInfo() model.MexcAPIData {
 	mexcAPIData := mexcGetJson("account/info", nil)
 	accountInfo := new(model.AccountInfo)
@@ -76,13 +99,35 @@ func AccountInfo() model.MexcAPIData {
 
 func mexcGetJson(apiPath string, params url.Values) model.MexcAPIData {
 	url := buildUrl(apiPath)
-	header := buildHeader(params)
+	header := buildHeader(params, nil)
 
 	if params != nil {
 		url = fmt.Sprintf("%s?%s", url, params.Encode())
 	}
 	resp, _ := chttp.HttpGetJson(url, header)
+	return processResp(url, resp)
+}
 
+func mexcPostJson(apiPath string, data []byte) model.MexcAPIData {
+	url := buildUrl(apiPath)
+	header := buildHeader(nil, data)
+
+	resp, _ := chttp.HttpPostJson(url, header, bytes.NewBuffer(data))
+	return processResp(url, resp)
+}
+
+func mexcDeleteJson(apiPath string, params url.Values) model.MexcAPIData {
+	url := buildUrl(apiPath)
+	header := buildHeader(params, nil)
+
+	if params != nil {
+		url = fmt.Sprintf("%s?%s", url, params.Encode())
+	}
+	resp, _ := chttp.HttpDeleteJson(url, header, nil)
+	return processResp(url, resp)
+}
+
+func processResp(url string, resp interface{}) model.MexcAPIData {
 	var mexcResp model.MexcResp
 	cfg := &mapstructure.DecoderConfig{
 		Metadata: nil,
@@ -99,8 +144,6 @@ func mexcGetJson(apiPath string, params url.Values) model.MexcAPIData {
 	} else {
 		log.WithFields(log.Fields{
 			"url": url,
-			"header": header,
-			"params": params,
 			"resp": resp,
 		}).Error("request mexc API failed")
 	}
@@ -112,16 +155,20 @@ func buildUrl(apiPath string) string {
 	return fmt.Sprintf("%s/%s", cboot.GV.Config.Api.Mexc.BaseURL, apiPath)
 }
 
-func buildHeader(params url.Values) http.Header {
+func buildHeader(params url.Values, data []byte) http.Header {
 	requestTime := strconv.FormatInt(time.Now().Unix() * 1000, 10)
 	header := http.Header{}
-	header.Add("Content-Type", "application/json")
-	header.Add("ApiKey", cboot.GV.Config.Api.Mexc.AK)
-	header.Add("Request-Time", requestTime)
+	header.Set("Content-Type", "application/json")
+	header.Set("ApiKey", cboot.GV.Config.Api.Mexc.AK)
+	header.Set("Request-Time", requestTime)
 
-	if params == nil {
-		str := fmt.Sprintf("%s%s%s", cboot.GV.Config.Api.Mexc.AK, requestTime, params.Encode())
-		header.Add("Signature", buildSignature(str))
+	signPrefixStr := fmt.Sprintf("%s%s", cboot.GV.Config.Api.Mexc.AK, requestTime)
+	if data == nil {
+		signStr := fmt.Sprintf("%s%s", signPrefixStr, params.Encode())
+		header.Set("Signature", buildSignature(signStr))
+	} else {
+		signStr := fmt.Sprintf("%s%s", signPrefixStr, string(data))
+		header.Set("Signature", buildSignature(signStr))
 	}
 	return header
 }

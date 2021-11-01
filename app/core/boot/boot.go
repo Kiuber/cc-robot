@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net"
 	"net/http"
+	"time"
 )
 
 var GV model.GlobalVariable
@@ -33,6 +34,7 @@ func initLog() {
 	// log.SetReportCaller(true)
 	formatter := &log.TextFormatter{
 		FullTimestamp: true,
+		TimestampFormat: time.RFC3339Nano,
 	}
 	log.SetFormatter(formatter)
 
@@ -70,6 +72,10 @@ func StartListenTcpService() {
 
 	http.HandleFunc("/check-health", httpHandler)
 	panic(http.Serve(listener, nil))
+}
+
+func RunAppPost() {
+	time.Sleep(time.Hour)
 }
 
 func httpHandler(w http.ResponseWriter, r *http.Request) {

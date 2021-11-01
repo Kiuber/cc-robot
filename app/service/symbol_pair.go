@@ -1,6 +1,7 @@
 package service
 
 import (
+	cid "cc-robot/core/tool/id"
 	"cc-robot/core/tool/mysql"
 	"cc-robot/core/tool/redis"
 	"cc-robot/dao"
@@ -9,19 +10,14 @@ import (
 	"context"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm/clause"
+	"math/big"
+	"strconv"
 	"strings"
 )
 
 var mexcSupportSymbolPair model.SupportSymbolPair
 
-
-func(app *App) HandleMexcSymbolPair() {
-	for {
-		handleMexcSymbolPair(*app)
-	}
-}
-
-func handleMexcSymbolPair(app App) {
+func processMexcAppearSymbolPair(app App) {
 	mexcAPIData := mexc.SupportSymbolPair()
 	supportSymbolPair := mexcAPIData.Payload.(model.SupportSymbolPair)
 
@@ -35,12 +31,12 @@ func handleMexcSymbolPair(app App) {
 	oldSymbolPairCount := len(mexcSupportSymbolPair.SymbolPairList)
 	newSymbolPairCount := len(supportSymbolPair.SymbolPairList)
 	if oldSymbolPairCount > 0 && newSymbolPairCount > oldSymbolPairCount {
-		handleSymbolPairAppear(app, supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
+		findNewSymbolPairs(app, supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
 	}
 	log.WithFields(log.Fields{
 		"oldSymbolPairCount": oldSymbolPairCount,
 		"newSymbolPairCount": newSymbolPairCount,
-	}).Info("handleSymbolPair")
+	}).Info("new old symbol pair count")
 
 	for symbolPair, symbol1And2 := range supportSymbolPair.SymbolPairMap {
 		exchangeSymbolPair := dao.ExchangeSymbolPair{ExchangeName: supportSymbolPair.Exchange, SymbolPair: symbolPair, Symbol1: symbol1And2[0], Symbol2: symbol1And2[1]}
@@ -58,10 +54,52 @@ func handleMexcSymbolPair(app App) {
 	mexcSupportSymbolPair = supportSymbolPair
 }
 
-func handleSymbolPairAppear(app App, exchange string, oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
-	for symbolPair := range newSupportSymbolPair.SymbolPairMap {
+func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
+	for symbolPair, symbol1And2 := range newSupportSymbolPair.SymbolPairMap {
 		if _, ok := oldSupportSymbolPair.SymbolPairMap[symbolPair]; !ok {
-			app.symbolPairCh <- model.AppearSymbolPair{SymbolPair: symbolPair, Exchange: exchange}
+			appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPair, Symbol1And2: symbol1And2, Exchange: exchange}
+			log.WithFields(log.Fields{"appearSymbolPair": appearSymbolPair}).Info("appear symbol pair")
+			app.symbolPairCh <- appearSymbolPair
 		}
 	}
+}
+
+func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPair) {
+	mexcAPIData := mexc.DepthInfo(appearSymbolPair.SymbolPair, "5")
+	if !mexcAPIData.OK {
+		return
+	}
+
+	depthInfo := mexcAPIData.Payload.(model.DepthInfo)
+
+	asks := depthInfo.Asks
+	lowestOfAsk := asks[0]
+	float, err := strconv.ParseFloat(lowestOfAsk.Price, 64)
+	if err != nil {
+		return
+	}
+
+	lowestOfAskPrice := big.NewFloat(float)
+	defaultBidUSDT := big.NewFloat(6)
+	quantity := big.NewFloat(0)
+
+	testBidPrice := big.NewFloat(0)
+	testBidPrice.Quo(lowestOfAskPrice, big.NewFloat(2))
+
+	quantity.Quo(defaultBidUSDT, testBidPrice)
+
+	log.WithFields(log.Fields{
+		"symbol":         appearSymbolPair.SymbolPair,
+		"lowest_price":   lowestOfAskPrice,
+		"test_ask_price": testBidPrice,
+	}).Info("symbol lowest price")
+
+	mexc.CreateOrder(model.Order{
+		SymbolPair:    appearSymbolPair.SymbolPair,
+		Price:         testBidPrice.String(),
+		Quantity:      quantity.String(),
+		TradeType:     "BID",
+		OrderType:     "LIMIT_ORDER",
+		ClientOrderId: cid.UniuqeId(),
+	})
 }

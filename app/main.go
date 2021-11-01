@@ -10,4 +10,8 @@ func main() {
 	cboot.Init()
 	go cboot.StartListenTcpService()
 	service.RunApp()
+
+	if cboot.GV.IsDev {
+		cboot.RunAppPost()
+	}
 }

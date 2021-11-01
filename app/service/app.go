@@ -9,6 +9,7 @@ import (
 
 type App struct {
 	symbolPairCh chan model.AppearSymbolPair
+	betterPriceCh chan model.AppearSymbolPair
 }
 
 func RunApp() {
@@ -20,16 +21,40 @@ func RunApp() {
 func initApp() *App {
 	app := &App{
 		symbolPairCh: make(chan model.AppearSymbolPair),
+		betterPriceCh: make(chan model.AppearSymbolPair),
 	}
 	return app
 }
 
 func(app *App) initLogic() {
-	go app.HandleMexcSymbolPair()
+	go app.ProcessMexcAppearSymbolPair()
 	for {
 		select {
 		case appearSymbolPair := <-app.symbolPairCh:
-			cinfra.GiantEventText(fmt.Sprintf("%s symbol pair appear %s", appearSymbolPair.Exchange, appearSymbolPair.SymbolPair))
+			app.betterPriceCh <- appearSymbolPair
+			cinfra.GiantEventText(fmt.Sprintf("%s appear %s symbol pair", appearSymbolPair.Exchange, appearSymbolPair.SymbolPair))
+		case appearSymbolPair := <- app.betterPriceCh:
+			go app.ProcessMexcSymbolPairTicker(appearSymbolPair)
 		}
+	}
+}
+
+func(app *App) ProcessMexcAppearSymbolPair() {
+	for {
+		processMexcAppearSymbolPair(*app)
+	}
+}
+
+func(app *App) ProcessMexcSymbolPairTicker(appearSymbolPair model.AppearSymbolPair) {
+	supportRightSymbol := "USDT"
+	if appearSymbolPair.Symbol1And2[1] != supportRightSymbol {
+		log.WithFields(log.Fields{
+			"appearSymbolPair": appearSymbolPair,
+		}).Info("not support appearSymbolPair")
+		return
+	}
+
+	for {
+		processMexcSymbolPairTicker(*app, appearSymbolPair)
 	}
 }
