@@ -57,6 +57,7 @@ class App(DevOpsApp):
         names = name.split('.')
         self.shell_run('cp app/config/%s.%s.%s app/config/%s' % (names[0], env, names[1], name))
 
+
 if __name__ == '__main__':
     common_args_option = {
         'args': [],

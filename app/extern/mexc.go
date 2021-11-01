@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/mitchellh/mapstructure"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -95,6 +96,13 @@ func mexcGetJson(apiPath string, params url.Values) model.MexcAPIData {
 	if mexcResp.Code == 200 {
 		mexcAPIData.OK = true
 		mexcAPIData.RawPayload = mexcResp.Data
+	} else {
+		log.WithFields(log.Fields{
+			"url": url,
+			"header": header,
+			"params": params,
+			"resp": resp,
+		}).Error("request mexc API failed")
 	}
 
 	return mexcAPIData
