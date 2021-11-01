@@ -50,4 +50,5 @@ type Mexc struct {
 	BaseURL      string `yaml:"base_url"`
 	AK      string `yaml:"access_key"`
 	AS      string `yaml:"access_secret"`
+	AllowTrade      bool `yaml:"allow_trade"`
 }

@@ -69,6 +69,9 @@ func DepthInfo(symbol string, depth string) model.MexcAPIData {
 }
 
 func CreateOrder(order model.Order) model.MexcAPIData {
+	if !cboot.GV.Config.Api.Mexc.AllowTrade {
+		return model.MexcAPIData{}
+	}
 	json, _ := json.Marshal(order)
 	mexcAPIData := mexcPostJson("order/place", json)
 
