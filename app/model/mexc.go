@@ -14,6 +14,11 @@ type MexcAPIData struct {
 	RawPayload interface{}
 }
 
+type MockAPIData map[string]struct {
+	APIPath string
+	Data string
+}
+
 type SupportSymbolPair struct {
 	SymbolPairList []string `mapstructure:"symbol"`
 	SymbolPairMap map[string][]string

@@ -84,9 +84,13 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 }
 
 func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice) {
-	// TODO: @qingbao, states
-	states := ""
-	mexc.OrderList(symbolPairBetterPrice.AppearSymbolPair.SymbolPair, "BID", states, "1000", "")
+	states := []string{"FILLED", "PARTIALLY_FILLED", "PARTIALLY_CANCELED"}
+	var orderList []model.OrderList
+	for _, state := range states {
+		mexcAPIData := mexc.OrderList(symbolPairBetterPrice.AppearSymbolPair.SymbolPair, "BID", state, "1000", "")
+		orderList = append(orderList, mexcAPIData.Payload.(model.OrderList))
+	}
+	// TODO: @qingbao, calculate order list
 
 	lowestOfAskPrice := symbolPairBetterPrice.LowestOfAskPrice
 	defaultBidUSDT := big.NewFloat(6)

@@ -15,8 +15,10 @@ import (
 func main() {
 	cboot.PrepareCmdArgs()
 	cboot.Init()
+	cboot.StartMockListenTcpService()
+
 	app := service.RunApp()
-	startListenTcpService(app)
+	startAppListenTcpService(app)
 
 	if cboot.GV.IsDev {
 		cboot.RunAppPost()
@@ -27,7 +29,7 @@ func httpHandler(writer http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(writer, r.URL)
 }
 
-func startListenTcpService(app *service.App) {
+func startAppListenTcpService(app *service.App) {
 	listener, err := net.Listen(model.AppListenType, fmt.Sprintf("%s:%s", model.AppListenHost, model.AppListenPort))
 	if err != nil {
 		panic(err)

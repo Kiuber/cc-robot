@@ -1,0 +1,72 @@
+{
+  "/open/api/v2/market/api_symbols": {
+    "code": 200,
+    "data": {
+      "symbol": [
+        "ALEPH_USDT",
+        "XFI_USDT",
+        "ETH3S_USDT",
+        "OGN_USDT",
+        "HC_USDT",
+        "PAX_USDT",
+        "BNU_USDT"
+      ]
+    }
+  },
+  "/open/api/v2/market/depth": {
+    "code": 200,
+    "data": {
+      "asks": [
+        {
+          "price": "183.1683154",
+          "quantity": "128.5"
+        },
+        {
+          "price": "183.1983186",
+          "quantity": "101.6"
+        }
+      ],
+      "bids": [
+        {
+          "price": "182.4417544",
+          "quantity": "115.5"
+        },
+        {
+          "price": "182.4217568",
+          "quantity": "135.7"
+        }
+      ]
+    }
+  },
+  "/open/api/v2/common/timestamp": {
+    "code": 200,
+    "data": 1573542414480
+  },
+  "/open/api/v2/order/list": {
+    "code": 200,
+    "data": [
+      {
+        "id": "70669675cac2414c90493be2dcfaf7e3",
+        "symbol": "MX_ETH",
+        "price": "0.000901",
+        "quantity": "300000",
+        "state": "NEW",
+        "type": "BID",
+        "deal_quantity": "0",
+        "deal_amount": "0",
+        "create_time": 1573217964000
+      },
+      {
+        "id": "ec42569b4f4349f7aabe26f78b0f8bd2",
+        "symbol": "MX_ETH",
+        "price": "0.000907",
+        "quantity": "300000",
+        "state": "NEW",
+        "type": "ASK",
+        "deal_quantity": "0",
+        "deal_amount": "0",
+        "create_time": 1573217963000
+      }
+    ]
+  }
+}
