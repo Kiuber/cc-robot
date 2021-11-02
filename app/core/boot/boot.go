@@ -7,8 +7,10 @@ import (
 	"flag"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -73,31 +75,42 @@ func StartMockListenTcpService() {
 		panic(err)
 	}
 
-	log.WithFields(log.Fields{"addr": listener.Addr().String()}).Info("StartListenTcpService")
+	files, err := ioutil.ReadDir("mock/")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	for apiPath := range getMockData() {
-		http.HandleFunc(apiPath, func(writer http.ResponseWriter, request *http.Request) {
-			realMockData := map[string]interface{}{}
-			cjson.UnmarshalFromFile("mock/mexc.json", &realMockData)
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		name := file.Name()
+		names := strings.Split(name, ".")
+		basePath := fmt.Sprintf("/%s", names[0])
 
-			for apiPath2, data  := range getMockData() {
-				if apiPath2 == request.URL.Path {
-					fmt.Fprintln(writer, cjson.Pretty(data))
+		for apiPath := range getMockData(name) {
+			http.HandleFunc(fmt.Sprintf("%s%s", basePath, apiPath), func(writer http.ResponseWriter, request *http.Request) {
+				for apiPath2, data  := range getMockData(name) {
+					if fmt.Sprintf("%s%s", basePath, apiPath2) == request.URL.Path {
+						fmt.Fprintln(writer, cjson.Pretty(data))
+					}
 				}
+			})
+		}
+
+		http.HandleFunc(fmt.Sprintf("%s", basePath), func(writer http.ResponseWriter, request *http.Request) {
+			for apiPath := range getMockData(name) {
+				fmt.Fprintln(writer, fmt.Sprintf("%s%s", basePath, apiPath))
 			}
 		})
 	}
 
-	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		for apiPath := range getMockData() {
-			fmt.Fprintln(writer, apiPath)
-		}
-	})
+	log.WithFields(log.Fields{"addr": listener.Addr().String()}).Info("StartMockListenTcpService")
 	go http.Serve(listener, nil)
 }
 
-func getMockData() map[string]interface{} {
+func getMockData(name string) map[string]interface{} {
 	mockData := map[string]interface{}{}
-	cjson.UnmarshalFromFile("mock/mexc.json", &mockData)
+	cjson.UnmarshalFromFile(fmt.Sprintf("mock/%s", name), &mockData)
 	return mockData
 }
