@@ -15,7 +15,10 @@ import (
 func main() {
 	cboot.PrepareCmdArgs()
 	cboot.Init()
-	cboot.StartMockListenTcpService()
+
+	if cboot.GV.IsDev {
+		cboot.StartMockListenTcpService()
+	}
 
 	app := service.RunApp()
 	startAppListenTcpService(app)
