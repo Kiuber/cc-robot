@@ -25,10 +25,6 @@ func main() {
 	}
 }
 
-func httpHandler(writer http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(writer, r.URL)
-}
-
 func startAppListenTcpService(app *service.App) {
 	listener, err := net.Listen(model.AppListenType, fmt.Sprintf("%s:%s", model.AppListenHost, model.AppListenPort))
 	if err != nil {
@@ -46,4 +42,8 @@ func startAppListenTcpService(app *service.App) {
 		app.BetterPriceCh <- appearSymbolPair
 	})
 	panic(http.Serve(listener, nil))
+}
+
+func httpHandler(writer http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(writer, r.URL)
 }

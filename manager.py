@@ -51,7 +51,10 @@ class App(DevOpsApp):
         self.shell_run('docker build -t %s .' % docker_image)
 
     def _run_for_dev(self):
-        self.shell_run('cd app && go run main.go -env=dev')
+        screen_name = '%s-%s' % (APP_NAME, 'dev')
+        self.shell_run('screen -ls | grep %s | cut -d . -f 1 | xargs pkill -TERM -P ' % screen_name, exit_on_error=False)
+        self.shell_run('cd app && screen -L -Logfile %s -S %s -dm go run main.go -env=dev' % (self.app_logs_dir + '/dev.log', screen_name))
+        self.shell_run('screen -S %s -X colon "logfile flush 0^M"' % screen_name)
 
     def _prepare_runtime(self, env):
         self._prepare_runtime_config('api.yaml', env)
