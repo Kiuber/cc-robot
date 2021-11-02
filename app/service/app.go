@@ -35,8 +35,8 @@ func(app *App) initLogic() {
 	for {
 		select {
 		case appearSymbolPair := <-app.symbolPairCh:
-			app.BetterPriceCh <- appearSymbolPair
 			cinfra.GiantEventText(fmt.Sprintf("%s appear %s symbol pair", appearSymbolPair.Exchange, appearSymbolPair.SymbolPair))
+			app.BetterPriceCh <- appearSymbolPair
 
 		case appearSymbolPair := <- app.BetterPriceCh:
 			go app.ProcessMexcSymbolPairTicker(appearSymbolPair)
