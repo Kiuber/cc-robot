@@ -30,11 +30,8 @@ class App(DevOpsApp):
         volumes = {
             '/etc/resolv.conf': '/etc/resolv.conf',
         }
-        ports = [
-            '3333:3333',
-        ]
 
-        args = dockerutil.base_docker_args(container_name=self.prod_container, volumes=volumes, ports=ports)
+        args = dockerutil.base_docker_args(container_name=self.prod_container, volumes=volumes)
         cmd_data = {'image': docker_image, 'args': args}
         cmd = template.render_str('docker run -d --restart always {{ args }} {{ image }}', cmd_data)
         self.shell_run(cmd)
