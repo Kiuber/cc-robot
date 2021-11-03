@@ -1,6 +1,7 @@
 package service
 
 import (
+	cboot "cc-robot/core/boot"
 	cid "cc-robot/core/tool/id"
 	"cc-robot/core/tool/mysql"
 	"cc-robot/core/tool/redis"
@@ -19,6 +20,10 @@ var mexcSupportSymbolPair model.SupportSymbolPair
 
 func processMexcAppearSymbolPair(app App) {
 	mexcAPIData := mexc.SupportSymbolPair()
+	if !mexcAPIData.OK {
+		return
+	}
+
 	supportSymbolPair := mexcAPIData.Payload.(model.SupportSymbolPair)
 
 	symbolPairMap := make(map[string][]string, len(supportSymbolPair.SymbolPairList))
@@ -30,13 +35,14 @@ func processMexcAppearSymbolPair(app App) {
 
 	oldSymbolPairCount := len(mexcSupportSymbolPair.SymbolPairList)
 	newSymbolPairCount := len(supportSymbolPair.SymbolPairList)
-	if oldSymbolPairCount > 0 && newSymbolPairCount > oldSymbolPairCount {
-		findNewSymbolPairs(app, supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
-	}
 	log.WithFields(log.Fields{
 		"oldSymbolPairCount": oldSymbolPairCount,
 		"newSymbolPairCount": newSymbolPairCount,
-	}).Info("new old symbol pair count")
+	}).Info("new and old symbol pair count")
+
+	if oldSymbolPairCount > 0 && newSymbolPairCount > oldSymbolPairCount {
+		findNewSymbolPairs(app, supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
+	}
 
 	for symbolPair, symbol1And2 := range supportSymbolPair.SymbolPairMap {
 		exchangeSymbolPair := dao.ExchangeSymbolPair{ExchangeName: supportSymbolPair.Exchange, SymbolPair: symbolPair, Symbol1: symbol1And2[0], Symbol2: symbol1And2[1]}
@@ -59,7 +65,11 @@ func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.Sup
 		if _, ok := oldSupportSymbolPair.SymbolPairMap[symbolPair]; !ok {
 			appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPair, Symbol1And2: symbol1And2, Exchange: exchange}
 			log.WithFields(log.Fields{"appearSymbolPair": appearSymbolPair}).Info("appear symbol pair")
-			app.symbolPairCh <- appearSymbolPair
+
+			if _, ok := app.appearSymbolPairManager[symbolPair]; !ok {
+				app.symbolPairCh <- appearSymbolPair
+				app.appearSymbolPairManager[symbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair}
+			}
 		}
 	}
 }
@@ -76,44 +86,171 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 	lowestOfAsk := asks[0]
 	float, err := strconv.ParseFloat(lowestOfAsk.Price, 64)
 	if err != nil {
+		log.Error("parse float failed")
 		return
 	}
 	lowestOfAskPrice := big.NewFloat(float)
 
-	app.orderManagerCh <- model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
+	oldLowestOfAskPrice := app.appearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice
+
+	logger := log.WithFields(log.Fields{
+		"symbolPair": appearSymbolPair.SymbolPair,
+		"old price": app.appearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice,
+		"new price": lowestOfAskPrice,
+	})
+	if oldLowestOfAskPrice == nil || lowestOfAskPrice.Cmp(oldLowestOfAskPrice) != 0 {
+		// TODO: @qingbao, close previous app.orderManagerCh
+		app.orderManagerCh <- model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
+		app.appearSymbolPairManager[appearSymbolPair.SymbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
+		logger.Info("better price need update")
+	} else {
+		logger.Info("better price not need update")
+	}
 }
 
 func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice) {
-	states := []string{"FILLED", "PARTIALLY_FILLED", "PARTIALLY_CANCELED"}
-	var orderList []model.OrderList
-	for _, state := range states {
-		mexcAPIData := mexc.OrderList(symbolPairBetterPrice.AppearSymbolPair.SymbolPair, "BID", state, "1000", "")
-		orderList = append(orderList, mexcAPIData.Payload.(model.OrderList))
+	symbolPair := symbolPairBetterPrice.AppearSymbolPair.SymbolPair
+	bidOrderList := getOrderList(symbolPair, "BID")
+
+	// default cost is 10 USDT
+	bidCost := big.NewFloat(10)
+	totalDealCost := big.NewFloat(0)
+	totalDealCostRate := big.NewFloat(0)
+	totalHoldQuantity := big.NewFloat(0)
+	for _, order := range bidOrderList {
+		dealCost, err := strconv.ParseFloat(order.DealCost, 64)
+		if err != nil {
+			log.Error("parse float failed")
+			return
+		}
+		dealQuantity, err := strconv.ParseFloat(order.DealQuantity, 64)
+		if err != nil {
+			log.Error("parse float failed")
+			return
+		}
+		totalDealCost.Add(totalDealCost, big.NewFloat(dealCost))
+		totalHoldQuantity.Add(totalHoldQuantity, big.NewFloat(dealQuantity))
 	}
-	// TODO: @qingbao, calculate order list
 
 	lowestOfAskPrice := symbolPairBetterPrice.LowestOfAskPrice
-	defaultBidUSDT := big.NewFloat(6)
-	quantity := big.NewFloat(0)
 
-	testBidPrice := big.NewFloat(0)
-	testBidPrice.Quo(lowestOfAskPrice, big.NewFloat(2))
+	// cancel all orders of the symbol pair
+	mexcAPIData := mexc.CancelOrder(symbolPair)
+	if !mexcAPIData.OK {
+		log.Error("cancel order failed")
+		return
+	} else {
+		log.Info("cancel order succeed")
+	}
 
-	quantity.Quo(defaultBidUSDT, testBidPrice)
+	testBidPrice := lowestOfAskPrice
+	if cboot.GV.IsDev {
+		// testBidPrice = big.NewFloat(0)
+		// testBidPrice.Quo(lowestOfAskPrice, big.NewFloat(2))
+	}
 
-	log.WithFields(log.Fields{
-		"symbol":         symbolPairBetterPrice.AppearSymbolPair.SymbolPair,
-		"lowest_price":   lowestOfAskPrice,
-		"test_ask_price": testBidPrice,
-	}).Info("symbol lowest price")
+	// bid finished: deal 90% cost
+	totalDealCostRate.Quo(totalDealCost, bidCost)
+	if totalDealCostRate.Cmp(big.NewFloat(0.9)) < 0 {
+		log.Info("add position")
 
-	mexc.CreateOrder(model.Order{
-		SymbolPair:    symbolPairBetterPrice.AppearSymbolPair.SymbolPair,
-		Price:         testBidPrice.String(),
+		bidCost.Sub(bidCost, totalDealCost)
+		quantity := big.NewFloat(0)
+		quantity.Quo(bidCost, testBidPrice)
+
+		log.WithFields(log.Fields{
+			"bidCost": bidCost,
+			"symbol": symbolPair,
+			"quantity": quantity,
+			"lowestOfAskPrice":	lowestOfAskPrice,
+			"testBidPrice": testBidPrice,
+			"totalDealCost": totalDealCost,
+			"totalDealCostRate": totalDealCostRate,
+			"totalHoldQuantity": totalHoldQuantity,
+		}).Info("prepare bid detail")
+
+		mexcAPIData = adjustPosition(symbolPair, "BID", testBidPrice, quantity)
+		if mexcAPIData.OK {
+			log.Info("create order is ok")
+		} else {
+			log.Error("create order is failed")
+		}
+	} else {
+		log.Info("sub position")
+
+		if lowestOfAskPrice.Cmp(big.NewFloat(0)) <= 0 {
+			log.Error("lowest ask price is <= 0")
+			return
+		}
+		mexcAPIData = mexc.AccountInfo()
+		accountInfo := mexcAPIData.Payload.(model.AccountInfo)
+		if _, ok := accountInfo[symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0]]; !ok {
+			log.Info("not hold")
+			return
+		}
+
+		balanceInfo := accountInfo[symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0]]
+		holdQuantityFloat, err := strconv.ParseFloat(balanceInfo.Available, 64)
+		if err != nil {
+			log.WithFields(log.Fields{"account symbol pair info": balanceInfo}).Error("parse float failed")
+			return
+		}
+		holdQuantity := big.NewFloat(holdQuantityFloat)
+
+		if holdQuantity.Cmp(big.NewFloat(0)) <= 0 {
+			log.WithFields(log.Fields{"balanceInfo": balanceInfo}).Error("not hold", holdQuantity.Cmp(big.NewFloat(0)))
+			return
+		}
+
+		log.Info("sub position")
+		totalHoldCost := big.NewFloat(0)
+		totalProfit := big.NewFloat(0)
+		totalProfitRate := big.NewFloat(0)
+		// TODO: @qingbao, dynamic adjust expect profit rate
+		expectedProfitRate := big.NewFloat(20)
+		profitRateDiff := big.NewFloat(0)
+		totalHoldCost.Mul(testBidPrice, holdQuantity)
+		totalProfit.Sub(totalHoldCost, totalDealCost)
+		totalProfitRate.Quo(totalProfit, totalDealCost)
+
+		profitRateDiff.Sub(totalProfitRate, expectedProfitRate)
+		log.WithFields(log.Fields{
+			"holdQuantity": holdQuantity,
+			"totalDealCost": totalDealCost,
+			"totalHoldCost": totalHoldCost,
+			"totalProfit": totalProfit,
+			"totalProfitRate": totalProfitRate,
+			"expectedProfitRate": expectedProfitRate,
+			"profitRateDiff": profitRateDiff,
+		}).Info("profit detail")
+		hasReachProfit := totalProfitRate.Cmp(expectedProfitRate) >= 0
+		log.Info("has reach expected profit rate: ", hasReachProfit)
+		if hasReachProfit {
+			adjustPosition(symbolPair, "ASK", testBidPrice, holdQuantity)
+		} else {
+			log.Info("not reach expected profit rate")
+		}
+	}
+}
+
+func adjustPosition(symbolPair string, tradeType string, price *big.Float, quantity *big.Float) model.MexcAPIData {
+	mexcAPIData := mexc.CreateOrder(model.Order{
+		SymbolPair:    symbolPair,
+		Price:         price.String(),
 		Quantity:      quantity.String(),
-		TradeType:     "BID",
+		TradeType:     tradeType,
 		OrderType:     "LIMIT_ORDER",
 		ClientOrderId: cid.UniuqeId(),
 	})
-	return
+	return mexcAPIData
+}
+
+func getOrderList(symbolPair string, tradeType string) model.OrderList {
+	var orderList model.OrderList
+	states := []string{"FILLED", "PARTIALLY_FILLED", "PARTIALLY_CANCELED"}
+	for _, state := range states {
+		mexcAPIData := mexc.OrderList(symbolPair, tradeType, state, "1000", "")
+		orderList = append(orderList, mexcAPIData.Payload.(model.OrderList)...)
+	}
+	return orderList
 }

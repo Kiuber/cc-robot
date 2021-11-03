@@ -5,10 +5,10 @@ import (
 	"cc-robot/model"
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"time"
 )
 
 type App struct {
+	appearSymbolPairManager map[string]model.SymbolPairBetterPrice
 	symbolPairCh   chan model.AppearSymbolPair
 	BetterPriceCh  chan model.AppearSymbolPair
 	orderManagerCh chan model.SymbolPairBetterPrice
@@ -23,6 +23,7 @@ func RunApp() *App {
 
 func initApp() *App {
 	app := &App{
+		appearSymbolPairManager: map[string]model.SymbolPairBetterPrice{},
 		symbolPairCh:   make(chan model.AppearSymbolPair),
 		BetterPriceCh:  make(chan model.AppearSymbolPair),
 		orderManagerCh: make(chan model.SymbolPairBetterPrice),
@@ -32,16 +33,38 @@ func initApp() *App {
 
 func(app *App) initLogic() {
 	go app.ProcessMexcAppearSymbolPair()
+	go app.listenAppearSymbolPair()
+	go app.listenBetterPrice()
+	go app.listenOrderManager()
+}
+
+func(app *App) listenAppearSymbolPair() {
 	for {
 		select {
 		case appearSymbolPair := <-app.symbolPairCh:
 			cinfra.GiantEventText(fmt.Sprintf("%s appear %s symbol pair", appearSymbolPair.Exchange, appearSymbolPair.SymbolPair))
 			app.BetterPriceCh <- appearSymbolPair
+		}
+	}
+}
 
-		case appearSymbolPair := <- app.BetterPriceCh:
-			go app.ProcessMexcSymbolPairTicker(appearSymbolPair)
+func(app *App) listenBetterPrice() {
+	for {
+		select {
+		case appearSymbolPair := <-app.BetterPriceCh:
+			if _, ok := app.appearSymbolPairManager[appearSymbolPair.SymbolPair]; !ok {
+				go app.ProcessMexcSymbolPairTicker(appearSymbolPair)
+			} else {
+				log.WithFields(log.Fields{"appearSymbolPair": appearSymbolPair}).Error("listen better price exist")
+			}
+		}
+	}
+}
 
-		case symbolPairBetterPrice := <- app.orderManagerCh:
+func(app *App) listenOrderManager() {
+	for {
+		select {
+		case symbolPairBetterPrice := <-app.orderManagerCh:
 			go app.ProcessOrder(symbolPairBetterPrice)
 		}
 	}
@@ -54,7 +77,7 @@ func(app *App) ProcessMexcAppearSymbolPair() {
 }
 
 func(app *App) ProcessMexcSymbolPairTicker(appearSymbolPair model.AppearSymbolPair) {
-	if !app.shouldContinueBySupportSymbolPair(appearSymbolPair.Symbol1And2[0], appearSymbolPair.Symbol1And2[1]) {
+	if !app.shouldContinueBySupportSymbolPair(appearSymbolPair.Symbol1And2) {
 		return
 	}
 
@@ -64,17 +87,23 @@ func(app *App) ProcessMexcSymbolPairTicker(appearSymbolPair model.AppearSymbolPa
 }
 
 func (app *App) ProcessOrder(symbolPairBetterPrice model.SymbolPairBetterPrice) {
-	if !app.shouldContinueBySupportSymbolPair(symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0], symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[1]) {
+	if !app.shouldContinueBySupportSymbolPair(symbolPairBetterPrice.AppearSymbolPair.Symbol1And2) {
 		return
 	}
 
-	for {
-		processMexcOrder(*app, symbolPairBetterPrice)
-		time.Sleep(3 * time.Second)
-	}
+	processMexcOrder(*app, symbolPairBetterPrice)
 }
 
-func (app *App) shouldContinueBySupportSymbolPair(leftSymbol string, rightSymbol string) bool {
+func (app *App) shouldContinueBySupportSymbolPair(symbol1And2 []string) bool {
+	if len(symbol1And2) != 2 {
+		log.WithFields(log.Fields{
+			"symbol1And2": symbol1And2,
+		}).Error("not support symbol pair")
+		return false
+	}
+
+	leftSymbol := symbol1And2[0]
+	rightSymbol := symbol1And2[1]
 	supportRightSymbol := "USDT"
 	ok := rightSymbol == supportRightSymbol
 	if !ok {

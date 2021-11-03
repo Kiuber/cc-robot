@@ -1,6 +1,7 @@
 package chttp
 
 import (
+	cid "cc-robot/core/tool/id"
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
 	"io"
@@ -9,37 +10,39 @@ import (
 	"os"
 )
 
+const ExtraRequestIdField = "Extra-Request-Id"
+
 func HttpGetJson(url string, header http.Header) (data interface{}, err error) {
-	resp, err := httpGet(url, header)
-	return jsonifyResp(resp)
+	resp, err, req := httpGet(url, header)
+	return jsonifyResp(resp, req)
 }
 
 func HttpPostJson(url string, header http.Header, body io.Reader) (data interface{}, err error) {
-	resp, err := httpPost(url, header, body)
-	return jsonifyResp(resp)
+	resp, err, req := httpPost(url, header, body)
+	return jsonifyResp(resp, req)
 }
 
 func HttpDeleteJson(url string, header http.Header, body io.Reader) (data interface{}, err error) {
-	resp, err := httpDelete(url, header, body)
-	return jsonifyResp(resp)
+	resp, err, req := httpDelete(url, header, body)
+	return jsonifyResp(resp, req)
 }
 
-func httpGet(url string, header http.Header) (resp *http.Response, err error) {
-	req, err := buildRequest("GET", url, header, nil)
+func httpGet(url string, header http.Header) (resp *http.Response, err error, req *http.Request) {
+	req, err = buildRequest("GET", url, header, nil)
 	resp, err = doRequest(req)
-	return resp, err
+	return resp, err, req
 }
 
-func httpPost(url string, header http.Header, body io.Reader) (resp *http.Response, err error) {
-	req, err := buildRequest("POST", url, header, body)
+func httpPost(url string, header http.Header, body io.Reader) (resp *http.Response, err error, req *http.Request) {
+	req, err = buildRequest("POST", url, header, body)
 	resp, err = doRequest(req)
-	return resp, err
+	return resp, err, req
 }
 
-func httpDelete(url string, header http.Header, body io.Reader) (resp *http.Response, err error) {
-	req, err := buildRequest("DELETE", url, header, body)
+func httpDelete(url string, header http.Header, body io.Reader) (resp *http.Response, err error, req *http.Request) {
+	req, err = buildRequest("DELETE", url, header, body)
 	resp, err = doRequest(req)
-	return resp, err
+	return resp, err, req
 }
 
 func buildRequest(method string, url string, header http.Header, body io.Reader) (resp *http.Request, err error) {
@@ -85,21 +88,36 @@ func mergeBasicHeader(req *http.Request, header http.Header) http.Header {
 	return header
 }
 
-func jsonifyResp(resp *http.Response) (data interface{}, err error) {
+func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err error) {
+	if resp == nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("jsonify, response nil")
+		return new(interface{}), err
+	}
+
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
 	if err != nil {
 		log.WithFields(log.Fields{
 			"resp": resp,
 			"err": err,
-		}).Error("HttpGetJson, read response")
+		}).Error("jsonify, read response")
 	}
 
-	bodyString := string(bodyBytes)
+	respStr := string(bodyBytes)
 	err = json.Unmarshal(bodyBytes, &data)
 
-	log.WithFields(log.Fields{
-		"bodyString": bodyString,
-	}).Debug("jsonifyResp, unmarshal")
+	logger := log.WithFields(log.Fields{
+		"respStr":           respStr,
+		ExtraRequestIdField: req.Header.Get(ExtraRequestIdField),
+		"err":               err,
+	})
+	if err != nil {
+		logger.Error("jsonify failed")
+	} else {
+		logger.Info("jsonify succeed")
+	}
 	return data, err
 }
 
@@ -107,5 +125,6 @@ func basicHeader() http.Header {
 	hostname, _ := os.Hostname()
 	header := http.Header{}
 	header.Set("Extra-Request-Hostname", hostname)
+	header.Set(ExtraRequestIdField, cid.UniuqeId())
 	return header
 }

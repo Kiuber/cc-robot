@@ -34,7 +34,7 @@ func initEnv() {
 }
 
 func initLog() {
-	// log.SetReportCaller(true)
+	log.SetReportCaller(true)
 	formatter := &log.TextFormatter{
 		FullTimestamp: true,
 		TimestampFormat: time.RFC3339Nano,
@@ -90,6 +90,7 @@ func StartMockListenTcpService() {
 
 		for apiPath := range getMockData(name) {
 			http.HandleFunc(fmt.Sprintf("%s%s", basePath, apiPath), func(writer http.ResponseWriter, request *http.Request) {
+				time.Sleep(3 * time.Second)
 				for apiPath2, data  := range getMockData(name) {
 					if fmt.Sprintf("%s%s", basePath, apiPath2) == request.URL.Path {
 						fmt.Fprintln(writer, cjson.Pretty(data))

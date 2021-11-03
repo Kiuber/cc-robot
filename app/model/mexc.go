@@ -51,26 +51,26 @@ type SymbolPairInfoList []struct {
 }
 
 type SymbolPairTickerInfo []struct {
-	SymbolPair string `json:"symbol"`
-	Volume string `json:"volume"`
-	High string `json:"high"`
-	Low string `json:"low"`
-	Bid string `json:"bid"`
-	Ask string `json:"ask"`
-	Open string `json:"open"`
-	Last string `json:"last"`
-	Time int64 `json:"time"`
-	ChangeRate string `json:"change_rate"`
+	SymbolPair string `mapstructure:"symbol"`
+	Volume string `mapstructure:"volume"`
+	High string `mapstructure:"high"`
+	Low string `mapstructure:"low"`
+	Bid string `mapstructure:"bid"`
+	Ask string `mapstructure:"ask"`
+	Open string `mapstructure:"open"`
+	Last string `mapstructure:"last"`
+	Time int64 `mapstructure:"time"`
+	ChangeRate string `mapstructure:"change_rate"`
 }
 
 type DepthInfo struct {
 	Asks []struct {
-		Price string `json:"price"`
-		Quantity string `json:"quantity"`
+		Price string `mapstructure:"price"`
+		Quantity string `mapstructure:"quantity"`
 	} `json:"asks"`
 	Bids []struct {
-		Price string `json:"price"`
-		Quantity string `json:"quantity"`
+		Price string `mapstructure:"price"`
+		Quantity string `mapstructure:"quantity"`
 	} `json:"bids"`
 }
 
@@ -84,17 +84,18 @@ type Order struct {
 }
 
 type OrderList []struct {
-	ID string `json:"id"`
-	SymbolPair string `json:"symbol"`
-	Price string `json:"price"`
-	Quantity string `json:"quantity"`
-	State string `json:"state"`
-	Type string `json:"type"`
-	DealQuantity string `json:"deal_quantity"`
-	DealAmount string `json:"deal_amount"`
+	ID string `mapstructure:"id"`
+	SymbolPair string `mapstructure:"symbol"`
+	Price string `mapstructure:"price"`
+	Quantity string `mapstructure:"quantity"`
+	State string `mapstructure:"state"`
+	Type string `mapstructure:"type"`
+	DealQuantity string `mapstructure:"deal_quantity"`
+	DealCost     string `mapstructure:"deal_amount"`
+	CreateTime   int64 `mapstructure:"create_time"`
 }
 
 type AccountInfo map[string]struct {
-	Frozen    string `json:"frozen"`
-	Available string `json:"available"`
+	Frozen    string `mapstructure:"frozen"`
+	Available string `mapstructure:"available"`
 }
