@@ -40,21 +40,11 @@ func processMexcAppearSymbolPair(app App) {
 		"newSymbolPairCount": newSymbolPairCount,
 	}).Info("new and old symbol pair count")
 
-	if oldSymbolPairCount > 0 && newSymbolPairCount > oldSymbolPairCount {
-		findNewSymbolPairs(app, supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
-	}
-
-	for symbolPair, symbol1And2 := range supportSymbolPair.SymbolPairMap {
-		exchangeSymbolPair := dao.ExchangeSymbolPair{ExchangeName: supportSymbolPair.Exchange, SymbolPair: symbolPair, Symbol1: symbol1And2[0], Symbol2: symbol1And2[1]}
-
-		err := redis.RdbClient().Set(context.Background(), symbolPair, symbolPair, 0).Err()
-		if err != nil {
-			panic(err)
+	if newSymbolPairCount > oldSymbolPairCount {
+		if oldSymbolPairCount > 0 {
+			findNewSymbolPairs(app, supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
 		}
-
-		mysql.MySQLClient().Clauses(clause.OnConflict{
-			UpdateAll: true,
-		}).Create(&exchangeSymbolPair)
+		persistentSymbolPairs(supportSymbolPair)
 	}
 
 	mexcSupportSymbolPair = supportSymbolPair
@@ -71,6 +61,21 @@ func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.Sup
 				app.appearSymbolPairManager[symbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair}
 			}
 		}
+	}
+}
+
+func persistentSymbolPairs(supportSymbolPair model.SupportSymbolPair) {
+	for symbolPair, symbol1And2 := range supportSymbolPair.SymbolPairMap {
+		exchangeSymbolPair := dao.ExchangeSymbolPair{ExchangeName: supportSymbolPair.Exchange, SymbolPair: symbolPair, Symbol1: symbol1And2[0], Symbol2: symbol1And2[1]}
+
+		err := redis.RdbClient().Set(context.Background(), symbolPair, symbolPair, 0).Err()
+		if err != nil {
+			panic(err)
+		}
+
+		mysql.MySQLClient().Clauses(clause.OnConflict{
+			UpdateAll: true,
+		}).Create(&exchangeSymbolPair)
 	}
 }
 
