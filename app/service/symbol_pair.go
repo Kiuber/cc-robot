@@ -14,6 +14,7 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var mexcSupportSymbolPair model.SupportSymbolPair
@@ -53,6 +54,14 @@ func processMexcAppearSymbolPair(app App) {
 func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
 	for symbolPair, symbol1And2 := range newSupportSymbolPair.SymbolPairMap {
 		if _, ok := oldSupportSymbolPair.SymbolPairMap[symbolPair]; !ok {
+			limit := int64(5)
+			mexcAPIData := mexc.KLine(symbolPair, "1m", strconv.FormatInt(time.Now().Unix() - ((limit + 1) * 60), 10), strconv.FormatInt(limit, 10))
+			kLineData := mexcAPIData.RawPayload.([]interface{})
+			if len(kLineData) > 0 {
+				log.WithFields(log.Fields{"symbolPair": symbolPair}).Error("It doesn't look like a new symbolPair")
+				continue
+			}
+
 			appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPair, Symbol1And2: symbol1And2, Exchange: exchange}
 			log.WithFields(log.Fields{"appearSymbolPair": appearSymbolPair}).Info("appear symbol pair")
 

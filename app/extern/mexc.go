@@ -107,6 +107,19 @@ func AccountInfo() model.MexcAPIData {
 	return mexcAPIData
 }
 
+func KLine(symbolPair string, interval string, startTime string, limit string) model.MexcAPIData {
+	params := url.Values{}
+	params.Set("symbol", symbolPair)
+	params.Set("interval", interval)
+	params.Set("start_time", startTime)
+	params.Set("limit", limit)
+	mexcAPIData := mexcGetJson("market/kline", params)
+	kLine := &[][]int{}
+	mapstructure.Decode(mexcAPIData.RawPayload, &kLine)
+	mexcAPIData.Payload = *kLine
+	return mexcAPIData
+}
+
 func mexcGetJson(apiPath string, params url.Values) model.MexcAPIData {
 	url := buildUrl(apiPath)
 	header := buildHeader(params, nil)
