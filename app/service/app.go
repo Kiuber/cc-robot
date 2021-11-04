@@ -12,6 +12,7 @@ type App struct {
 	symbolPairCh   chan model.AppearSymbolPair
 	BetterPriceCh  chan model.AppearSymbolPair
 	orderManagerCh chan model.SymbolPairBetterPrice
+	listeningSymbolPair map[string][]string
 }
 
 func RunApp() *App {
@@ -27,6 +28,7 @@ func initApp() *App {
 		symbolPairCh:   make(chan model.AppearSymbolPair),
 		BetterPriceCh:  make(chan model.AppearSymbolPair),
 		orderManagerCh: make(chan model.SymbolPairBetterPrice),
+		listeningSymbolPair: make(map[string][]string),
 	}
 	return app
 }
@@ -52,7 +54,8 @@ func(app *App) listenBetterPrice() {
 	for {
 		select {
 		case appearSymbolPair := <-app.BetterPriceCh:
-			if _, ok := app.appearSymbolPairManager[appearSymbolPair.SymbolPair]; !ok {
+			if _, ok := app.listeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
+				app.listeningSymbolPair[appearSymbolPair.SymbolPair] = appearSymbolPair.Symbol1And2
 				go app.ProcessMexcSymbolPairTicker(appearSymbolPair)
 			} else {
 				log.WithFields(log.Fields{"appearSymbolPair": appearSymbolPair}).Error("listen better price exist")

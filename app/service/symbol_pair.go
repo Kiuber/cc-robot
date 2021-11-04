@@ -66,7 +66,7 @@ func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.Sup
 			appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPair, Symbol1And2: symbol1And2, Exchange: exchange}
 			log.WithFields(log.Fields{"appearSymbolPair": appearSymbolPair}).Info("appear symbol pair")
 
-			if _, ok := app.appearSymbolPairManager[symbolPair]; !ok {
+			if _, ok := app.listeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
 				app.symbolPairCh <- appearSymbolPair
 				app.appearSymbolPairManager[symbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair}
 			}
