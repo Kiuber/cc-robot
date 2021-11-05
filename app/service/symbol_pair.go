@@ -231,7 +231,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		totalProfit := big.NewFloat(0)
 		totalProfitRate := big.NewFloat(0)
 		// TODO: @qingbao, dynamic adjust expect profit rate
-		expectedProfitRate := big.NewFloat(20)
+		expectedProfitRate := big.NewFloat(0.1)
 		profitRateDiff := big.NewFloat(0)
 		totalHoldCost.Mul(testBidPrice, holdQuantity)
 		totalProfit.Sub(totalHoldCost, totalDealCost)
