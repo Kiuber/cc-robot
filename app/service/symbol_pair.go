@@ -3,13 +3,14 @@ package service
 import (
 	cboot "cc-robot/core/boot"
 	cid "cc-robot/core/tool/id"
+	clog "cc-robot/core/tool/log"
 	"cc-robot/core/tool/mysql"
 	"cc-robot/core/tool/redis"
 	"cc-robot/dao"
 	mexc "cc-robot/extern"
 	"cc-robot/model"
 	"context"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm/clause"
 	"math/big"
 	"strconv"
@@ -36,7 +37,7 @@ func processMexcAppearSymbolPair(app App) {
 
 	oldSymbolPairCount := len(mexcSupportSymbolPair.SymbolPairList)
 	newSymbolPairCount := len(supportSymbolPair.SymbolPairList)
-	log.WithFields(log.Fields{
+	clog.EventLog().WithFields(logrus.Fields{
 		"oldSymbolPairCount": oldSymbolPairCount,
 		"newSymbolPairCount": newSymbolPairCount,
 	}).Info("new and old symbol pair count")
@@ -58,12 +59,12 @@ func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.Sup
 			mexcAPIData := mexc.KLine(symbolPair, "1m", strconv.FormatInt(time.Now().Unix() - ((limit + 1) * 60), 10), strconv.FormatInt(limit, 10))
 			kLineData := mexcAPIData.RawPayload.([]interface{})
 			if len(kLineData) > 0 {
-				log.WithFields(log.Fields{"symbolPair": symbolPair}).Error("It doesn't look like a new symbolPair")
+				clog.EventLog().WithFields(logrus.Fields{"symbolPair": symbolPair}).Error("It doesn't look like a new symbolPair")
 				continue
 			}
 
 			appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPair, Symbol1And2: symbol1And2, Exchange: exchange}
-			log.WithFields(log.Fields{"appearSymbolPair": appearSymbolPair}).Info("appear symbol pair")
+			clog.EventLog().WithFields(logrus.Fields{"appearSymbolPair": appearSymbolPair}).Info("appear symbol pair")
 
 			if _, ok := app.listeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
 				app.symbolPairCh <- appearSymbolPair
@@ -100,14 +101,14 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 	lowestOfAsk := asks[0]
 	float, err := strconv.ParseFloat(lowestOfAsk.Price, 64)
 	if err != nil {
-		log.Error("parse float failed")
+		clog.EventLog().Error("parse float failed")
 		return
 	}
 	lowestOfAskPrice := big.NewFloat(float)
 
 	oldLowestOfAskPrice := app.appearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice
 
-	logger := log.WithFields(log.Fields{
+	logger := clog.EventLog().WithFields(logrus.Fields{
 		"symbolPair": appearSymbolPair.SymbolPair,
 		"old price": app.appearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice,
 		"new price": lowestOfAskPrice,
@@ -134,12 +135,12 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	for _, order := range bidOrderList {
 		dealCost, err := strconv.ParseFloat(order.DealCost, 64)
 		if err != nil {
-			log.Error("parse float failed")
+			clog.EventLog().Error("parse float failed")
 			return
 		}
 		dealQuantity, err := strconv.ParseFloat(order.DealQuantity, 64)
 		if err != nil {
-			log.Error("parse float failed")
+			clog.EventLog().Error("parse float failed")
 			return
 		}
 		totalDealCost.Add(totalDealCost, big.NewFloat(dealCost))
@@ -151,10 +152,10 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	// cancel all orders of the symbol pair
 	mexcAPIData := mexc.CancelOrder(symbolPair)
 	if !mexcAPIData.OK {
-		log.Error("cancel order failed")
+		clog.EventLog().Error("cancel order failed")
 		return
 	} else {
-		log.Info("cancel order succeed")
+		clog.EventLog().Info("cancel order succeed")
 	}
 
 	testBidPrice := lowestOfAskPrice
@@ -166,13 +167,13 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	// bid finished: deal 90% cost
 	totalDealCostRate.Quo(totalDealCost, bidCost)
 	if totalDealCostRate.Cmp(big.NewFloat(0.9)) < 0 {
-		log.Info("add position")
+		clog.EventLog().Info("add position")
 
 		bidCost.Sub(bidCost, totalDealCost)
 		quantity := big.NewFloat(0)
 		quantity.Quo(bidCost, testBidPrice)
 
-		log.WithFields(log.Fields{
+		clog.EventLog().WithFields(logrus.Fields{
 			"bidCost": bidCost,
 			"symbol": symbolPair,
 			"quantity": quantity,
@@ -185,38 +186,38 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 
 		mexcAPIData = adjustPosition(symbolPair, "BID", testBidPrice, quantity)
 		if mexcAPIData.OK {
-			log.Info("create order is ok")
+			clog.EventLog().Info("create order is ok")
 		} else {
-			log.Error("create order is failed")
+			clog.EventLog().Error("create order is failed")
 		}
 	} else {
-		log.Info("sub position")
+		clog.EventLog().Info("sub position")
 
 		if lowestOfAskPrice.Cmp(big.NewFloat(0)) <= 0 {
-			log.Error("lowest ask price is <= 0")
+			clog.EventLog().Error("lowest ask price is <= 0")
 			return
 		}
 		mexcAPIData = mexc.AccountInfo()
 		accountInfo := mexcAPIData.Payload.(model.AccountInfo)
 		if _, ok := accountInfo[symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0]]; !ok {
-			log.Info("not hold")
+			clog.EventLog().Info("not hold")
 			return
 		}
 
 		balanceInfo := accountInfo[symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0]]
 		holdQuantityFloat, err := strconv.ParseFloat(balanceInfo.Available, 64)
 		if err != nil {
-			log.WithFields(log.Fields{"account symbol pair info": balanceInfo}).Error("parse float failed")
+			clog.EventLog().WithFields(logrus.Fields{"account symbol pair info": balanceInfo}).Error("parse float failed")
 			return
 		}
 		holdQuantity := big.NewFloat(holdQuantityFloat)
 
 		if holdQuantity.Cmp(big.NewFloat(0)) <= 0 {
-			log.WithFields(log.Fields{"balanceInfo": balanceInfo}).Error("not hold", holdQuantity.Cmp(big.NewFloat(0)))
+			clog.EventLog().WithFields(logrus.Fields{"balanceInfo": balanceInfo}).Error("not hold", holdQuantity.Cmp(big.NewFloat(0)))
 			return
 		}
 
-		log.Info("sub position")
+		clog.EventLog().Info("sub position")
 		totalHoldCost := big.NewFloat(0)
 		totalProfit := big.NewFloat(0)
 		totalProfitRate := big.NewFloat(0)
@@ -228,7 +229,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		totalProfitRate.Quo(totalProfit, totalDealCost)
 
 		profitRateDiff.Sub(totalProfitRate, expectedProfitRate)
-		log.WithFields(log.Fields{
+		clog.EventLog().WithFields(logrus.Fields{
 			"holdQuantity": holdQuantity,
 			"totalDealCost": totalDealCost,
 			"totalHoldCost": totalHoldCost,
@@ -238,11 +239,11 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 			"profitRateDiff": profitRateDiff,
 		}).Info("profit detail")
 		hasReachProfit := totalProfitRate.Cmp(expectedProfitRate) >= 0
-		log.Info("has reach expected profit rate: ", hasReachProfit)
+		clog.EventLog().Info("has reach expected profit rate: ", hasReachProfit)
 		if hasReachProfit {
 			adjustPosition(symbolPair, "ASK", testBidPrice, holdQuantity)
 		} else {
-			log.Info("not reach expected profit rate")
+			clog.EventLog().Info("not reach expected profit rate")
 		}
 	}
 }

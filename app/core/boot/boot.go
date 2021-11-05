@@ -2,11 +2,12 @@ package cboot
 
 import (
 	cjson "cc-robot/core/tool/json"
+	clog "cc-robot/core/tool/log"
 	cyaml "cc-robot/core/tool/yaml"
 	"cc-robot/model"
 	"flag"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -34,18 +35,8 @@ func initEnv() {
 }
 
 func initLog() {
-	log.SetReportCaller(true)
-	formatter := &log.TextFormatter{
-		FullTimestamp: true,
-		TimestampFormat: time.RFC3339Nano,
-	}
-	log.SetFormatter(formatter)
-
-	logLevel := log.InfoLevel
-	if isDev {
-		logLevel = log.DebugLevel
-	}
-	log.SetLevel(logLevel)
+	clog.InitLogOptions(clog.EventLog(), isDev)
+	clog.InitLogOptions(clog.VerboseLog(), isDev)
 }
 
 func initGV() {
@@ -62,7 +53,7 @@ func initGV() {
 	gv.Config.Api = *api
 	GV = *gv
 
-	log.WithFields(log.Fields{"global variable": GV}).Info("initGV")
+	clog.EventLog().WithFields(logrus.Fields{"global variable": GV}).Info("initGV")
 }
 
 func RunAppPost() {
@@ -77,7 +68,7 @@ func StartMockListenTcpService() {
 
 	files, err := ioutil.ReadDir("mock/")
 	if err != nil {
-		log.Fatal(err)
+		clog.EventLog().Fatal(err)
 	}
 
 	for _, file := range files {
@@ -106,7 +97,7 @@ func StartMockListenTcpService() {
 		})
 	}
 
-	log.WithFields(log.Fields{"addr": listener.Addr().String()}).Info("StartMockListenTcpService")
+	clog.EventLog().WithFields(logrus.Fields{"addr": listener.Addr().String()}).Info("StartMockListenTcpService")
 	go http.Serve(listener, nil)
 }
 

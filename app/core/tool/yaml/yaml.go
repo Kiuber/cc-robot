@@ -1,8 +1,9 @@
 package cyaml
 
 import (
+	clog "cc-robot/core/tool/log"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 )
@@ -10,7 +11,7 @@ import (
 func LoadConfig(configFname string, out interface{}) {
 	file, err := ioutil.ReadFile(fmt.Sprintf("config/%s", configFname))
 
-	logger := log.WithFields(log.Fields{configFname: configFname})
+	logger := clog.EventLog().WithFields(logrus.Fields{configFname: configFname})
 
 	if err != nil {
 		logger.Error("LoadConfig ReadFile err")

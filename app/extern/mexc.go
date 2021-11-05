@@ -4,6 +4,7 @@ import (
 	"bytes"
 	cboot "cc-robot/core/boot"
 	chttp "cc-robot/core/tool/http"
+	clog "cc-robot/core/tool/log"
 	"cc-robot/model"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -11,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mitchellh/mapstructure"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -165,7 +166,7 @@ func processResp(url string, resp interface{}) model.MexcAPIData {
 		mexcAPIData.OK = true
 		mexcAPIData.RawPayload = mexcResp.Data
 	} else {
-		log.WithFields(log.Fields{
+		clog.EventLog().WithFields(logrus.Fields{
 			"url": url,
 			"resp": resp,
 		}).Error("request mexc API failed")

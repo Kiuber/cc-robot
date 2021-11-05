@@ -2,8 +2,9 @@ package chttp
 
 import (
 	cid "cc-robot/core/tool/id"
+	clog "cc-robot/core/tool/log"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -48,14 +49,14 @@ func httpDelete(url string, header http.Header, body io.Reader) (resp *http.Resp
 func buildRequest(method string, url string, header http.Header, body io.Reader) (resp *http.Request, err error) {
 	req , err := http.NewRequest(method, url, body)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("new request failed")
+		clog.VerboseLog().WithFields(logrus.Fields{"err": err}).Error("new request failed")
 	}
 	req.Header = mergeBasicHeader(req, header)
 	return req, nil
 }
 
 func doRequest(req *http.Request) (resp *http.Response, err error) {
-	logger := log.WithFields(log.Fields{
+	logger := clog.VerboseLog().WithFields(logrus.Fields{
 		"method": req.Method,
 		"url": req.URL,
 		"header": req.Header,
@@ -66,7 +67,7 @@ func doRequest(req *http.Request) (resp *http.Response, err error) {
 	client := http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
-		logger.WithFields(log.Fields{
+		logger.WithFields(logrus.Fields{
 			"err": err,
 		}).Error("request failed")
 	}
@@ -90,7 +91,7 @@ func mergeBasicHeader(req *http.Request, header http.Header) http.Header {
 
 func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err error) {
 	if resp == nil {
-		log.WithFields(log.Fields{
+		clog.VerboseLog().WithFields(logrus.Fields{
 			"err": err,
 		}).Error("jsonify, response nil")
 		return new(interface{}), err
@@ -99,7 +100,7 @@ func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	if err != nil {
-		log.WithFields(log.Fields{
+		clog.VerboseLog().WithFields(logrus.Fields{
 			"resp": resp,
 			"err": err,
 		}).Error("jsonify, read response")
@@ -108,7 +109,7 @@ func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err 
 	respStr := string(bodyBytes)
 	err = json.Unmarshal(bodyBytes, &data)
 
-	logger := log.WithFields(log.Fields{
+	logger := clog.VerboseLog().WithFields(logrus.Fields{
 		"respStr":           respStr,
 		ExtraRequestIdField: req.Header.Get(ExtraRequestIdField),
 		"err":               err,

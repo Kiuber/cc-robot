@@ -50,7 +50,7 @@ class App(DevOpsApp):
 
     def _restart_dev(self):
         self.stop_dev()
-        self.shell_run('cd app && screen -L -Logfile %s -S %s -dm go run main.go -env=dev' % (self.app_logs_dir + '/dev.log', self.dev_screen_name))
+        self.shell_run('cd app && screen -L -Logfile %s -S %s -dm go run main.go -env=dev' % (self.app_logs_dir + '/app-dev.log', self.dev_screen_name))
         self.shell_run('screen -S %s -X colon "logfile flush 0^M"' % self.dev_screen_name)
 
     def stop_dev(self):

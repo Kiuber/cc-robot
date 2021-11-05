@@ -2,8 +2,9 @@ package mysql
 
 import (
 	cboot "cc-robot/core/boot"
+	clog "cc-robot/core/tool/log"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"time"
 
 	"gorm.io/driver/mysql"
@@ -31,7 +32,7 @@ func Setup() {
 	}
 	dialector = mysql.New(config)
 
-	logger := log.WithFields(log.Fields{"mysql config": config})
+	logger := clog.EventLog().WithFields(logrus.Fields{"mysql config": config})
 
 	conn, err := gorm.Open(dialector, &gorm.Config{})
 	logger.Info("start connect")
@@ -55,7 +56,7 @@ func MySQLClient() *gorm.DB {
 
 	sqlDB, err := client.DB()
 	if err != nil {
-		log.Error("connect MySQLClient server failed.")
+		clog.EventLog().Error("connect MySQLClient server failed.")
 		Setup()
 	}
 	if err := sqlDB.Ping(); err != nil {

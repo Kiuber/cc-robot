@@ -3,10 +3,11 @@ package main
 import (
 	cboot "cc-robot/core/boot"
 	cjson "cc-robot/core/tool/json"
+	clog "cc-robot/core/tool/log"
 	"cc-robot/model"
 	"cc-robot/service"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"net"
 	"net/http"
 	"strings"
@@ -34,7 +35,7 @@ func startAppListenTcpService(app *service.App) {
 		panic(err)
 	}
 
-	log.WithFields(log.Fields{"addr": listener.Addr().String()}).Info("StartListenTcpService")
+	clog.EventLog().WithFields(logrus.Fields{"addr": listener.Addr().String()}).Info("StartListenTcpService")
 
 	http.HandleFunc("/check-health", httpHandler)
 	http.HandleFunc("/test-appear-symbol-pair", func(writer http.ResponseWriter, request *http.Request) {

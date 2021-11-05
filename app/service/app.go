@@ -2,9 +2,10 @@ package service
 
 import (
 	cinfra "cc-robot/core/tool/infra"
+	clog "cc-robot/core/tool/log"
 	"cc-robot/model"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type App struct {
@@ -16,7 +17,7 @@ type App struct {
 }
 
 func RunApp() *App {
-	log.Info("run app")
+	clog.EventLog().Info("run app")
 	app := initApp()
 	go app.initLogic()
 	return app
@@ -58,7 +59,7 @@ func(app *App) listenBetterPrice() {
 				app.listeningSymbolPair[appearSymbolPair.SymbolPair] = appearSymbolPair.Symbol1And2
 				go app.ProcessMexcSymbolPairTicker(appearSymbolPair)
 			} else {
-				log.WithFields(log.Fields{"appearSymbolPair": appearSymbolPair}).Error("listen better price exist")
+				clog.EventLog().WithFields(logrus.Fields{"appearSymbolPair": appearSymbolPair}).Error("listen better price exist")
 			}
 		}
 	}
@@ -99,7 +100,7 @@ func (app *App) ProcessOrder(symbolPairBetterPrice model.SymbolPairBetterPrice) 
 
 func (app *App) shouldContinueBySupportSymbolPair(symbol1And2 []string) bool {
 	if len(symbol1And2) != 2 {
-		log.WithFields(log.Fields{
+		clog.EventLog().WithFields(logrus.Fields{
 			"symbol1And2": symbol1And2,
 		}).Error("not support symbol pair")
 		return false
@@ -110,7 +111,7 @@ func (app *App) shouldContinueBySupportSymbolPair(symbol1And2 []string) bool {
 	supportRightSymbol := "USDT"
 	ok := rightSymbol == supportRightSymbol
 	if !ok {
-		log.WithFields(log.Fields{
+		clog.EventLog().WithFields(logrus.Fields{
 			"leftSymbol": leftSymbol,
 			"rightSymbol": rightSymbol,
 		}).Error("not support symbol pair")
