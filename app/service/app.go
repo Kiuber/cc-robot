@@ -14,6 +14,7 @@ type App struct {
 	BetterPriceCh  chan model.AppearSymbolPair
 	orderManagerCh chan model.SymbolPairBetterPrice
 	listeningSymbolPair map[string][]string
+	adjustOrderFailed map[string]bool
 }
 
 func RunApp() *App {
@@ -30,6 +31,7 @@ func initApp() *App {
 		BetterPriceCh:  make(chan model.AppearSymbolPair),
 		orderManagerCh: make(chan model.SymbolPairBetterPrice),
 		listeningSymbolPair: make(map[string][]string),
+		adjustOrderFailed: make(map[string]bool),
 	}
 	return app
 }

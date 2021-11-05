@@ -122,7 +122,7 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 		"old price": app.appearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice,
 		"new price": lowestOfAskPrice,
 	})
-	if oldLowestOfAskPrice == nil || lowestOfAskPrice.Cmp(oldLowestOfAskPrice) != 0 {
+	if oldLowestOfAskPrice == nil || lowestOfAskPrice.Cmp(oldLowestOfAskPrice) != 0 || !app.adjustOrderFailed[appearSymbolPair.SymbolPair] {
 		// TODO: @qingbao, close previous app.orderManagerCh
 		app.orderManagerCh <- model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
 		app.appearSymbolPairManager[appearSymbolPair.SymbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
@@ -201,6 +201,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 			logger.Info("create order is ok")
 		} else {
 			logger.Error("create order is failed")
+			app.adjustOrderFailed[symbolPair] = false
 		}
 	} else {
 		logger.Info("sub position")
@@ -252,7 +253,13 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		hasReachProfit := totalProfitRate.Cmp(expectedProfitRate) >= 0
 		logger.Info("has reach expected profit rate: ", hasReachProfit)
 		if hasReachProfit {
-			adjustPosition(symbolPair, "ASK", testBidPrice, holdQuantity)
+			mexcAPIData = adjustPosition(symbolPair, "ASK", testBidPrice, holdQuantity)
+			if mexcAPIData.OK {
+				logger.Info("create order is ok")
+			} else {
+				logger.Error("create order is failed")
+				app.adjustOrderFailed[symbolPair] = false
+			}
 		} else {
 			logger.Info("not reach expected profit rate")
 		}
