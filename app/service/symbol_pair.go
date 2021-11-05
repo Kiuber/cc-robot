@@ -135,6 +135,9 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice) {
 	symbolPair := symbolPairBetterPrice.AppearSymbolPair.SymbolPair
 	bidOrderList := getOrderList(symbolPair, "BID")
+	logger := clog.EventLog().WithFields(logrus.Fields{
+		"symbolPair": symbolPair,
+	})
 
 	// default cost is 10 USDT
 	bidCost := big.NewFloat(10)
@@ -144,12 +147,12 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	for _, order := range bidOrderList {
 		dealCost, err := strconv.ParseFloat(order.DealCost, 64)
 		if err != nil {
-			clog.EventLog().Error("parse float failed")
+			logger.Error("parse float failed")
 			return
 		}
 		dealQuantity, err := strconv.ParseFloat(order.DealQuantity, 64)
 		if err != nil {
-			clog.EventLog().Error("parse float failed")
+			logger.Error("parse float failed")
 			return
 		}
 		totalDealCost.Add(totalDealCost, big.NewFloat(dealCost))
@@ -161,10 +164,10 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	// cancel all orders of the symbol pair
 	mexcAPIData := mexc.CancelOrder(symbolPair)
 	if !mexcAPIData.OK {
-		clog.EventLog().Error("cancel order failed")
+		logger.Error("cancel order failed")
 		return
 	} else {
-		clog.EventLog().Info("cancel order succeed")
+		logger.Info("cancel order succeed")
 	}
 
 	testBidPrice := lowestOfAskPrice
@@ -176,7 +179,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	// bid finished: deal 90% cost
 	totalDealCostRate.Quo(totalDealCost, bidCost)
 	if totalDealCostRate.Cmp(big.NewFloat(0.9)) < 0 {
-		clog.EventLog().Info("add position")
+		logger.Info("add position")
 
 		bidCost.Sub(bidCost, totalDealCost)
 		quantity := big.NewFloat(0)
@@ -195,21 +198,21 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 
 		mexcAPIData = adjustPosition(symbolPair, "BID", testBidPrice, quantity)
 		if mexcAPIData.OK {
-			clog.EventLog().Info("create order is ok")
+			logger.Info("create order is ok")
 		} else {
-			clog.EventLog().Error("create order is failed")
+			logger.Error("create order is failed")
 		}
 	} else {
-		clog.EventLog().Info("sub position")
+		logger.Info("sub position")
 
 		if lowestOfAskPrice.Cmp(big.NewFloat(0)) <= 0 {
-			clog.EventLog().Error("lowest ask price is <= 0")
+			logger.Error("lowest ask price is <= 0")
 			return
 		}
 		mexcAPIData = mexc.AccountInfo()
 		accountInfo := mexcAPIData.Payload.(model.AccountInfo)
 		if _, ok := accountInfo[symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0]]; !ok {
-			clog.EventLog().Info("not hold")
+			logger.Info("not hold")
 			return
 		}
 
@@ -226,7 +229,6 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 			return
 		}
 
-		clog.EventLog().Info("sub position")
 		totalHoldCost := big.NewFloat(0)
 		totalProfit := big.NewFloat(0)
 		totalProfitRate := big.NewFloat(0)
@@ -248,11 +250,11 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 			"profitRateDiff": profitRateDiff,
 		}).Info("profit detail")
 		hasReachProfit := totalProfitRate.Cmp(expectedProfitRate) >= 0
-		clog.EventLog().Info("has reach expected profit rate: ", hasReachProfit)
+		logger.Info("has reach expected profit rate: ", hasReachProfit)
 		if hasReachProfit {
 			adjustPosition(symbolPair, "ASK", testBidPrice, holdQuantity)
 		} else {
-			clog.EventLog().Info("not reach expected profit rate")
+			logger.Info("not reach expected profit rate")
 		}
 	}
 }
