@@ -165,9 +165,11 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	mexcAPIData := mexc.CancelOrder(symbolPair)
 	if !mexcAPIData.OK {
 		logger.Error("cancel order failed")
+		app.adjustOrderFailed[symbolPair] = false
 		return
 	} else {
 		logger.Info("cancel order succeed")
+		app.adjustOrderFailed[symbolPair] = true
 	}
 
 	testBidPrice := lowestOfAskPrice
@@ -199,6 +201,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		mexcAPIData = adjustPosition(symbolPair, "BID", testBidPrice, quantity)
 		if mexcAPIData.OK {
 			logger.Info("create order is ok")
+			app.adjustOrderFailed[symbolPair] = true
 		} else {
 			logger.Error("create order is failed")
 			app.adjustOrderFailed[symbolPair] = false
@@ -256,6 +259,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 			mexcAPIData = adjustPosition(symbolPair, "ASK", testBidPrice, holdQuantity)
 			if mexcAPIData.OK {
 				logger.Info("create order is ok")
+				app.adjustOrderFailed[symbolPair] = true
 			} else {
 				logger.Error("create order is failed")
 				app.adjustOrderFailed[symbolPair] = false
