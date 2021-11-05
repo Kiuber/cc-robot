@@ -98,6 +98,15 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 	depthInfo := mexcAPIData.Payload.(model.DepthInfo)
 
 	asks := depthInfo.Asks
+	if asks == nil {
+		clog.EventLog().Error("asks is nil")
+		return
+	}
+	if len(asks) <= 0 {
+		clog.EventLog().Info("asks is empty")
+		return
+	}
+
 	lowestOfAsk := asks[0]
 	float, err := strconv.ParseFloat(lowestOfAsk.Price, 64)
 	if err != nil {
