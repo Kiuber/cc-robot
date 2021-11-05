@@ -99,3 +99,8 @@ type AccountInfo map[string]struct {
 	Frozen    string `mapstructure:"frozen"`
 	Available string `mapstructure:"available"`
 }
+
+type SymbolPairConf struct {
+	BidCost *big.Float
+	ExpectedProfitRate *big.Float
+}

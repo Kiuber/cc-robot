@@ -6,15 +6,17 @@ import (
 	"cc-robot/model"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"math/big"
 )
 
 type App struct {
-	appearSymbolPairManager map[string]model.SymbolPairBetterPrice
-	symbolPairCh   chan model.AppearSymbolPair
+	AppearSymbolPairManager map[string]model.SymbolPairBetterPrice
+	symbolPairCh            chan model.AppearSymbolPair
 	BetterPriceCh  chan model.AppearSymbolPair
-	orderManagerCh chan model.SymbolPairBetterPrice
-	listeningSymbolPair map[string][]string
+	orderManagerCh      chan model.SymbolPairBetterPrice
+	ListeningSymbolPair map[string][]string
 	adjustOrderFailed map[string]bool
+	SymbolPairConf map[string]model.SymbolPairConf
 }
 
 func RunApp() *App {
@@ -26,12 +28,13 @@ func RunApp() *App {
 
 func initApp() *App {
 	app := &App{
-		appearSymbolPairManager: map[string]model.SymbolPairBetterPrice{},
-		symbolPairCh:   make(chan model.AppearSymbolPair),
-		BetterPriceCh:  make(chan model.AppearSymbolPair),
-		orderManagerCh: make(chan model.SymbolPairBetterPrice),
-		listeningSymbolPair: make(map[string][]string),
+		AppearSymbolPairManager: map[string]model.SymbolPairBetterPrice{},
+		symbolPairCh:            make(chan model.AppearSymbolPair),
+		BetterPriceCh:           make(chan model.AppearSymbolPair),
+		orderManagerCh:          make(chan model.SymbolPairBetterPrice),
+		ListeningSymbolPair:     make(map[string][]string),
 		adjustOrderFailed: make(map[string]bool),
+		SymbolPairConf: make(map[string]model.SymbolPairConf),
 	}
 	return app
 }
@@ -57,8 +60,13 @@ func(app *App) listenBetterPrice() {
 	for {
 		select {
 		case appearSymbolPair := <-app.BetterPriceCh:
-			if _, ok := app.listeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
-				app.listeningSymbolPair[appearSymbolPair.SymbolPair] = appearSymbolPair.Symbol1And2
+			if _, ok := app.ListeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
+				app.ListeningSymbolPair[appearSymbolPair.SymbolPair] = appearSymbolPair.Symbol1And2
+				app.SymbolPairConf[appearSymbolPair.SymbolPair] = model.SymbolPairConf{
+					// default cost is 10 USDT
+					BidCost: big.NewFloat(10),
+					ExpectedProfitRate: big.NewFloat(0.1),
+				}
 				go app.ProcessMexcSymbolPairTicker(appearSymbolPair)
 			} else {
 				clog.EventLog().WithFields(logrus.Fields{"appearSymbolPair": appearSymbolPair}).Error("listen better price exist")

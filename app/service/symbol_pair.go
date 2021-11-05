@@ -66,9 +66,9 @@ func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.Sup
 			appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPair, Symbol1And2: symbol1And2, Exchange: exchange}
 			clog.EventLog().WithFields(logrus.Fields{"appearSymbolPair": appearSymbolPair}).Info("appear symbol pair")
 
-			if _, ok := app.listeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
+			if _, ok := app.ListeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
 				app.symbolPairCh <- appearSymbolPair
-				app.appearSymbolPairManager[symbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair}
+				app.AppearSymbolPairManager[symbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair}
 			}
 		}
 	}
@@ -115,17 +115,17 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 	}
 	lowestOfAskPrice := big.NewFloat(float)
 
-	oldLowestOfAskPrice := app.appearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice
+	oldLowestOfAskPrice := app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice
 
 	logger := clog.EventLog().WithFields(logrus.Fields{
 		"symbolPair": appearSymbolPair.SymbolPair,
-		"old price": app.appearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice,
+		"old price": app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice,
 		"new price": lowestOfAskPrice,
 	})
 	if oldLowestOfAskPrice == nil || lowestOfAskPrice.Cmp(oldLowestOfAskPrice) != 0 || !app.adjustOrderFailed[appearSymbolPair.SymbolPair] {
 		// TODO: @qingbao, close previous app.orderManagerCh
 		app.orderManagerCh <- model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
-		app.appearSymbolPairManager[appearSymbolPair.SymbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
+		app.AppearSymbolPairManager[appearSymbolPair.SymbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
 		logger.Info("better price need update")
 	} else {
 		logger.Info("better price not need update")
@@ -134,13 +134,13 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 
 func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice) {
 	symbolPair := symbolPairBetterPrice.AppearSymbolPair.SymbolPair
+	symbolPairConf := app.SymbolPairConf[symbolPair]
 	bidOrderList := getOrderList(symbolPair, "BID")
 	logger := clog.EventLog().WithFields(logrus.Fields{
 		"symbolPair": symbolPair,
 	})
 
-	// default cost is 10 USDT
-	bidCost := big.NewFloat(10)
+	bidCost := symbolPairConf.BidCost
 	totalDealCost := big.NewFloat(0)
 	totalDealCostRate := big.NewFloat(0)
 	totalHoldQuantity := big.NewFloat(0)
@@ -236,8 +236,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		totalHoldCost := big.NewFloat(0)
 		totalProfit := big.NewFloat(0)
 		totalProfitRate := big.NewFloat(0)
-		// TODO: @qingbao, dynamic adjust expect profit rate
-		expectedProfitRate := big.NewFloat(0.1)
+		expectedProfitRate := symbolPairConf.ExpectedProfitRate
 		profitRateDiff := big.NewFloat(0)
 		totalHoldCost.Mul(testBidPrice, holdQuantity)
 		totalProfit.Sub(totalHoldCost, totalDealCost)

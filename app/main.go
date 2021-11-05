@@ -8,6 +8,7 @@ import (
 	"cc-robot/service"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"math/big"
 	"net"
 	"net/http"
 	"strings"
@@ -37,17 +38,40 @@ func startAppListenTcpService(app *service.App) {
 
 	clog.EventLog().WithFields(logrus.Fields{"addr": listener.Addr().String()}).Info("StartListenTcpService")
 
-	http.HandleFunc("/check-health", httpHandler)
-	http.HandleFunc("/test-appear-symbol-pair", func(writer http.ResponseWriter, request *http.Request) {
-		symbolPair := request.URL.Query().Get("symbol_pair")
-		symbol1And2 := strings.Split(symbolPair, "_")
-		appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPair, Symbol1And2: symbol1And2}
-		fmt.Fprintln(writer, cjson.Pretty(appearSymbolPair))
+	http.HandleFunc("/check-health", func(writer http.ResponseWriter, request *http.Request) {
+		fmt.Fprintln(writer, request.URL)
+	})
+	http.HandleFunc("/summary", func(writer http.ResponseWriter, request *http.Request) {
+		fmt.Fprintln(writer, cjson.Pretty(buildSummary(app)))
+	})
+	http.HandleFunc("/appear-symbol-pair", func(writer http.ResponseWriter, request *http.Request) {
+		symbolPairParam := request.URL.Query().Get("symbol_pair")
+		symbol1And2 := strings.Split(symbolPairParam, "_")
+		appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPairParam, Symbol1And2: symbol1And2}
 		app.BetterPriceCh <- appearSymbolPair
+		fmt.Fprintln(writer, cjson.Pretty(buildSummary(app)))
+	})
+	http.HandleFunc("/update-symbol-pair-conf", func(writer http.ResponseWriter, request *http.Request) {
+		symbolPairParam := request.URL.Query().Get("symbol_pair")
+		expectedProfitRateParam := request.URL.Query().Get("expected_profit_rate")
+		expectedProfitRate, ok := big.NewFloat(0).SetString(expectedProfitRateParam)
+		if !ok {
+			fmt.Fprintln(writer, "expectedProfitRateParam illegal")
+			return
+		}
+		app.SymbolPairConf[symbolPairParam] = model.SymbolPairConf{
+			BidCost: app.SymbolPairConf[symbolPairParam].BidCost,
+			ExpectedProfitRate: expectedProfitRate,
+		}
+		fmt.Fprintln(writer, cjson.Pretty(buildSummary(app)))
 	})
 	panic(http.Serve(listener, nil))
 }
 
-func httpHandler(writer http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(writer, r.URL)
+func buildSummary(app *service.App) map[string]interface{} {
+	return map[string]interface{}{
+		"AppearSymbolPairManager": app.AppearSymbolPairManager,
+		"ListeningSymbolPair": app.ListeningSymbolPair,
+		"SymbolPairConf": app.SymbolPairConf,
+	}
 }
