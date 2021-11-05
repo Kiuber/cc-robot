@@ -29,6 +29,7 @@ class App(DevOpsApp):
 
         volumes = {
             '/etc/resolv.conf': '/etc/resolv.conf',
+            self.app_runtime_storage_dir: self.app_runtime_storage_dir
         }
 
         args = dockerutil.base_docker_args(container_name=self.prod_container, volumes=volumes)
