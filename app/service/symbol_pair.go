@@ -57,6 +57,11 @@ func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.Sup
 		if _, ok := oldSupportSymbolPair.SymbolPairMap[symbolPair]; !ok {
 			limit := int64(5)
 			mexcAPIData := mexc.KLine(symbolPair, "1m", strconv.FormatInt(time.Now().Unix()-((limit+1)*60), 10), strconv.FormatInt(limit, 10))
+			if !mexcAPIData.OK {
+				clog.EventLog().WithFields(logrus.Fields{"msg": mexcAPIData.Msg}).Info("get kline failed")
+				continue
+			}
+
 			kLineData := mexcAPIData.RawPayload.([]interface{})
 			if len(kLineData) > 0 {
 				clog.EventLog().WithFields(logrus.Fields{"symbolPair": symbolPair}).Error("It doesn't look like a new symbolPair")
