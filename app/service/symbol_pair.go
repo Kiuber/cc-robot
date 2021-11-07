@@ -62,7 +62,7 @@ func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.Sup
 				continue
 			}
 
-			kLineData := mexcAPIData.RawPayload.([]interface{})
+			kLineData := mexcAPIData.Payload.([]interface{})
 			if len(kLineData) > 0 {
 				clog.EventLog().WithFields(logrus.Fields{"symbolPair": symbolPair}).Error("It doesn't look like a new symbolPair")
 				continue
@@ -72,7 +72,7 @@ func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.Sup
 			clog.EventLog().WithFields(logrus.Fields{"appearSymbolPair": appearSymbolPair}).Info("appear symbol pair")
 
 			if _, ok := app.ListeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
-				app.symbolPairCh <- appearSymbolPair
+				app.AppearSymbolPairCh <- appearSymbolPair
 				app.AppearSymbolPairManager[symbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair}
 			}
 		}
@@ -128,8 +128,8 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 		"new price":  lowestOfAskPrice,
 	})
 	if oldLowestOfAskPrice == nil || lowestOfAskPrice.Cmp(oldLowestOfAskPrice) != 0 || !app.adjustOrderFailed[appearSymbolPair.SymbolPair] {
-		// TODO: @qingbao, close previous app.orderManagerCh
-		app.orderManagerCh <- model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
+		// TODO: @qingbao, close previous app.processOrderManagerCh
+		app.processOrderManagerCh <- model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
 		app.AppearSymbolPairManager[appearSymbolPair.SymbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
 		logger.Info("better price need update")
 	} else {

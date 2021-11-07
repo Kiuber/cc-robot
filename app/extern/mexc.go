@@ -115,7 +115,7 @@ func KLine(symbolPair string, interval string, startTime string, limit string) m
 	params.Set("start_time", startTime)
 	params.Set("limit", limit)
 	mexcAPIData := mexcGetJson("market/kline", params)
-	kLine := &[][]int{}
+	kLine := &[]interface{}{}
 	mapstructure.Decode(mexcAPIData.RawPayload, &kLine)
 	mexcAPIData.Payload = *kLine
 	return mexcAPIData
@@ -128,16 +128,16 @@ func mexcGetJson(apiPath string, params url.Values) model.MexcAPIData {
 	if params != nil {
 		url = fmt.Sprintf("%s?%s", url, params.Encode())
 	}
-	resp, _ := chttp.HttpGetJson(url, header)
-	return processResp(url, resp)
+	resp, err := chttp.HttpGetJson(url, header)
+	return processResp(url, resp, err)
 }
 
 func mexcPostJson(apiPath string, data []byte) model.MexcAPIData {
 	url := buildUrl(apiPath)
 	header := buildHeader(nil, data)
 
-	resp, _ := chttp.HttpPostJson(url, header, bytes.NewBuffer(data))
-	return processResp(url, resp)
+	resp, err := chttp.HttpPostJson(url, header, bytes.NewBuffer(data))
+	return processResp(url, resp, err)
 }
 
 func mexcDeleteJson(apiPath string, params url.Values) model.MexcAPIData {
@@ -147,11 +147,11 @@ func mexcDeleteJson(apiPath string, params url.Values) model.MexcAPIData {
 	if params != nil {
 		url = fmt.Sprintf("%s?%s", url, params.Encode())
 	}
-	resp, _ := chttp.HttpDeleteJson(url, header, nil)
-	return processResp(url, resp)
+	resp, err := chttp.HttpDeleteJson(url, header, nil)
+	return processResp(url, resp, err)
 }
 
-func processResp(url string, resp interface{}) model.MexcAPIData {
+func processResp(url string, resp interface{}, err error) model.MexcAPIData {
 	var mexcResp model.MexcResp
 	cfg := &mapstructure.DecoderConfig{
 		Metadata: nil,
@@ -166,6 +166,7 @@ func processResp(url string, resp interface{}) model.MexcAPIData {
 		mexcAPIData.OK = true
 		mexcAPIData.RawPayload = mexcResp.Data
 	} else {
+		mexcAPIData.Msg = fmt.Sprintf("parse resp failed, error: %s", err.Error())
 		clog.EventLog().WithFields(logrus.Fields{
 			"url":  url,
 			"resp": resp,

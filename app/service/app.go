@@ -10,10 +10,10 @@ import (
 )
 
 type App struct {
+	AppearSymbolPairCh      chan model.AppearSymbolPair
+	AcquireBetterPriceCh    chan model.AppearSymbolPair
+	processOrderManagerCh   chan model.SymbolPairBetterPrice
 	AppearSymbolPairManager map[string]model.SymbolPairBetterPrice
-	symbolPairCh            chan model.AppearSymbolPair
-	BetterPriceCh           chan model.AppearSymbolPair
-	orderManagerCh          chan model.SymbolPairBetterPrice
 	ListeningSymbolPair     map[string][]string
 	adjustOrderFailed       map[string]bool
 	SymbolPairConf          map[string]model.SymbolPairConf
@@ -28,10 +28,10 @@ func RunApp() *App {
 
 func initApp() *App {
 	app := &App{
+		AppearSymbolPairCh:      make(chan model.AppearSymbolPair),
+		AcquireBetterPriceCh:    make(chan model.AppearSymbolPair),
+		processOrderManagerCh:   make(chan model.SymbolPairBetterPrice),
 		AppearSymbolPairManager: map[string]model.SymbolPairBetterPrice{},
-		symbolPairCh:            make(chan model.AppearSymbolPair),
-		BetterPriceCh:           make(chan model.AppearSymbolPair),
-		orderManagerCh:          make(chan model.SymbolPairBetterPrice),
 		ListeningSymbolPair:     make(map[string][]string),
 		adjustOrderFailed:       make(map[string]bool),
 		SymbolPairConf:          make(map[string]model.SymbolPairConf),
@@ -49,9 +49,9 @@ func (app *App) initLogic() {
 func (app *App) listenAppearSymbolPair() {
 	for {
 		select {
-		case appearSymbolPair := <-app.symbolPairCh:
+		case appearSymbolPair := <-app.AppearSymbolPairCh:
 			cinfra.GiantEventText(fmt.Sprintf("%s appear %s symbol pair", appearSymbolPair.Exchange, appearSymbolPair.SymbolPair))
-			app.BetterPriceCh <- appearSymbolPair
+			app.AcquireBetterPriceCh <- appearSymbolPair
 		}
 	}
 }
@@ -59,7 +59,7 @@ func (app *App) listenAppearSymbolPair() {
 func (app *App) listenBetterPrice() {
 	for {
 		select {
-		case appearSymbolPair := <-app.BetterPriceCh:
+		case appearSymbolPair := <-app.AcquireBetterPriceCh:
 			if _, ok := app.ListeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
 				app.ListeningSymbolPair[appearSymbolPair.SymbolPair] = appearSymbolPair.Symbol1And2
 				app.SymbolPairConf[appearSymbolPair.SymbolPair] = model.SymbolPairConf{
@@ -78,7 +78,7 @@ func (app *App) listenBetterPrice() {
 func (app *App) listenOrderManager() {
 	for {
 		select {
-		case symbolPairBetterPrice := <-app.orderManagerCh:
+		case symbolPairBetterPrice := <-app.processOrderManagerCh:
 			go app.ProcessOrder(symbolPairBetterPrice)
 		}
 	}

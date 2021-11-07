@@ -72,5 +72,67 @@
   "/open/api/v2/common/timestamp": {
     "code": 200,
     "data": 1573542414480
+  },
+  "/open/api/v2/account/info": {
+    "code": 200,
+    "data": {
+      "BTC": {
+        "frozen": "0",
+        "available": "140"
+      },
+      "ETH": {
+        "frozen": "8471.296525048",
+        "available": "483280.9653659222035"
+      },
+      "USDT": {
+        "frozen": "0",
+        "available": "27.3629"
+      },
+      "MX": {
+        "frozen": "30.9863",
+        "available": "450.0137"
+      }
+    }
+  },
+  "/open/api/v2/order/cancel_by_symbol": {
+    "code": 200,
+    "data": [
+      {
+        "msg": "success",
+        "order_id": "75ecf99feef04538b78e4622beaba6eb",
+        "client_order_id": "a9329e86f2094b0d8b58e92c25029554"
+      },
+      {
+        "msg": "success",
+        "order_id": "139413c48f8b4c018f452ce796586bcf"
+      },
+      {
+        "msg": "success",
+        "order_id": "b58ef34c570e4917981f276d44091484"
+      }
+    ]
+  },
+  "/open/api/v2/market/kline": {
+    "code": 200,
+    "datax": [
+      [
+        1557728040,
+        "7054.7",
+        "7056.26",
+        "7056.29",
+        "7054.16",
+        "9.817734",
+        "6926.521"
+      ],
+      [
+        1557728100,
+        "7056.26",
+        "7042.17",
+        "7056.98",
+        "7042.16",
+        "23.69423",
+        "1677.931"
+      ]
+    ]
   }
 }
