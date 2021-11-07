@@ -56,7 +56,7 @@ func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.Sup
 	for symbolPair, symbol1And2 := range newSupportSymbolPair.SymbolPairMap {
 		if _, ok := oldSupportSymbolPair.SymbolPairMap[symbolPair]; !ok {
 			limit := int64(5)
-			mexcAPIData := mexc.KLine(symbolPair, "1m", strconv.FormatInt(time.Now().Unix() - ((limit + 1) * 60), 10), strconv.FormatInt(limit, 10))
+			mexcAPIData := mexc.KLine(symbolPair, "1m", strconv.FormatInt(time.Now().Unix()-((limit+1)*60), 10), strconv.FormatInt(limit, 10))
 			kLineData := mexcAPIData.RawPayload.([]interface{})
 			if len(kLineData) > 0 {
 				clog.EventLog().WithFields(logrus.Fields{"symbolPair": symbolPair}).Error("It doesn't look like a new symbolPair")
@@ -119,8 +119,8 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 
 	logger := clog.EventLog().WithFields(logrus.Fields{
 		"symbolPair": appearSymbolPair.SymbolPair,
-		"old price": app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice,
-		"new price": lowestOfAskPrice,
+		"old price":  app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice,
+		"new price":  lowestOfAskPrice,
 	})
 	if oldLowestOfAskPrice == nil || lowestOfAskPrice.Cmp(oldLowestOfAskPrice) != 0 || !app.adjustOrderFailed[appearSymbolPair.SymbolPair] {
 		// TODO: @qingbao, close previous app.orderManagerCh
@@ -188,12 +188,12 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		quantity.Quo(bidCost, testBidPrice)
 
 		clog.EventLog().WithFields(logrus.Fields{
-			"bidCost": bidCost,
-			"symbol": symbolPair,
-			"quantity": quantity,
-			"lowestOfAskPrice":	lowestOfAskPrice,
-			"testBidPrice": testBidPrice,
-			"totalDealCost": totalDealCost,
+			"bidCost":           bidCost,
+			"symbol":            symbolPair,
+			"quantity":          quantity,
+			"lowestOfAskPrice":  lowestOfAskPrice,
+			"testBidPrice":      testBidPrice,
+			"totalDealCost":     totalDealCost,
 			"totalDealCostRate": totalDealCostRate,
 			"totalHoldQuantity": totalHoldQuantity,
 		}).Info("prepare bid detail")
@@ -244,13 +244,13 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 
 		profitRateDiff.Sub(totalProfitRate, expectedProfitRate)
 		clog.EventLog().WithFields(logrus.Fields{
-			"holdQuantity": holdQuantity,
-			"totalDealCost": totalDealCost,
-			"totalHoldCost": totalHoldCost,
-			"totalProfit": totalProfit,
-			"totalProfitRate": totalProfitRate,
+			"holdQuantity":       holdQuantity,
+			"totalDealCost":      totalDealCost,
+			"totalHoldCost":      totalHoldCost,
+			"totalProfit":        totalProfit,
+			"totalProfitRate":    totalProfitRate,
 			"expectedProfitRate": expectedProfitRate,
-			"profitRateDiff": profitRateDiff,
+			"profitRateDiff":     profitRateDiff,
 		}).Info("profit detail")
 		hasReachProfit := totalProfitRate.Cmp(expectedProfitRate) >= 0
 		logger.Info("has reach expected profit rate: ", hasReachProfit)

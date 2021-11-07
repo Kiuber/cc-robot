@@ -41,7 +41,7 @@ func initLog() {
 
 func initGV() {
 	gv := &model.GlobalVariable{
-		Env: *env,
+		Env:   *env,
 		IsDev: isDev,
 	}
 
@@ -82,7 +82,7 @@ func StartMockListenTcpService() {
 		for apiPath := range getMockData(name) {
 			http.HandleFunc(fmt.Sprintf("%s%s", basePath, apiPath), func(writer http.ResponseWriter, request *http.Request) {
 				time.Sleep(3 * time.Second)
-				for apiPath2, data  := range getMockData(name) {
+				for apiPath2, data := range getMockData(name) {
 					if fmt.Sprintf("%s%s", basePath, apiPath2) == request.URL.Path {
 						fmt.Fprintln(writer, cjson.Pretty(data))
 					}

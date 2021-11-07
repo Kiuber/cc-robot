@@ -9,10 +9,10 @@ import (
 var client *redis.Client
 
 func Setup() {
-	c := redis.NewClient(&redis.Options {
-		Addr:	  fmt.Sprintf("%s:%s", cboot.GV.Config.Infra.RedisConfig.Host, cboot.GV.Config.Infra.RedisConfig.Port),
+	c := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", cboot.GV.Config.Infra.RedisConfig.Host, cboot.GV.Config.Infra.RedisConfig.Port),
 		Password: cboot.GV.Config.Infra.RedisConfig.Password,
-		DB:		  0,
+		DB:       0,
 	})
 	client = c
 }

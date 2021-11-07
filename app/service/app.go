@@ -12,11 +12,11 @@ import (
 type App struct {
 	AppearSymbolPairManager map[string]model.SymbolPairBetterPrice
 	symbolPairCh            chan model.AppearSymbolPair
-	BetterPriceCh  chan model.AppearSymbolPair
-	orderManagerCh      chan model.SymbolPairBetterPrice
-	ListeningSymbolPair map[string][]string
-	adjustOrderFailed map[string]bool
-	SymbolPairConf map[string]model.SymbolPairConf
+	BetterPriceCh           chan model.AppearSymbolPair
+	orderManagerCh          chan model.SymbolPairBetterPrice
+	ListeningSymbolPair     map[string][]string
+	adjustOrderFailed       map[string]bool
+	SymbolPairConf          map[string]model.SymbolPairConf
 }
 
 func RunApp() *App {
@@ -33,20 +33,20 @@ func initApp() *App {
 		BetterPriceCh:           make(chan model.AppearSymbolPair),
 		orderManagerCh:          make(chan model.SymbolPairBetterPrice),
 		ListeningSymbolPair:     make(map[string][]string),
-		adjustOrderFailed: make(map[string]bool),
-		SymbolPairConf: make(map[string]model.SymbolPairConf),
+		adjustOrderFailed:       make(map[string]bool),
+		SymbolPairConf:          make(map[string]model.SymbolPairConf),
 	}
 	return app
 }
 
-func(app *App) initLogic() {
+func (app *App) initLogic() {
 	go app.ProcessMexcAppearSymbolPair()
 	go app.listenAppearSymbolPair()
 	go app.listenBetterPrice()
 	go app.listenOrderManager()
 }
 
-func(app *App) listenAppearSymbolPair() {
+func (app *App) listenAppearSymbolPair() {
 	for {
 		select {
 		case appearSymbolPair := <-app.symbolPairCh:
@@ -56,7 +56,7 @@ func(app *App) listenAppearSymbolPair() {
 	}
 }
 
-func(app *App) listenBetterPrice() {
+func (app *App) listenBetterPrice() {
 	for {
 		select {
 		case appearSymbolPair := <-app.BetterPriceCh:
@@ -64,7 +64,7 @@ func(app *App) listenBetterPrice() {
 				app.ListeningSymbolPair[appearSymbolPair.SymbolPair] = appearSymbolPair.Symbol1And2
 				app.SymbolPairConf[appearSymbolPair.SymbolPair] = model.SymbolPairConf{
 					// default cost is 10 USDT
-					BidCost: big.NewFloat(10),
+					BidCost:            big.NewFloat(10),
 					ExpectedProfitRate: big.NewFloat(0.1),
 				}
 				go app.ProcessMexcSymbolPairTicker(appearSymbolPair)
@@ -75,7 +75,7 @@ func(app *App) listenBetterPrice() {
 	}
 }
 
-func(app *App) listenOrderManager() {
+func (app *App) listenOrderManager() {
 	for {
 		select {
 		case symbolPairBetterPrice := <-app.orderManagerCh:
@@ -84,13 +84,13 @@ func(app *App) listenOrderManager() {
 	}
 }
 
-func(app *App) ProcessMexcAppearSymbolPair() {
+func (app *App) ProcessMexcAppearSymbolPair() {
 	for {
 		processMexcAppearSymbolPair(*app)
 	}
 }
 
-func(app *App) ProcessMexcSymbolPairTicker(appearSymbolPair model.AppearSymbolPair) {
+func (app *App) ProcessMexcSymbolPairTicker(appearSymbolPair model.AppearSymbolPair) {
 	if !app.shouldContinueBySupportSymbolPair(appearSymbolPair.Symbol1And2) {
 		return
 	}
@@ -122,7 +122,7 @@ func (app *App) shouldContinueBySupportSymbolPair(symbol1And2 []string) bool {
 	ok := rightSymbol == supportRightSymbol
 	if !ok {
 		clog.EventLog().WithFields(logrus.Fields{
-			"leftSymbol": leftSymbol,
+			"leftSymbol":  leftSymbol,
 			"rightSymbol": rightSymbol,
 		}).Error("not support symbol pair")
 	}

@@ -60,7 +60,7 @@ func startAppListenTcpService(app *service.App) {
 			return
 		}
 		app.SymbolPairConf[symbolPairParam] = model.SymbolPairConf{
-			BidCost: app.SymbolPairConf[symbolPairParam].BidCost,
+			BidCost:            app.SymbolPairConf[symbolPairParam].BidCost,
 			ExpectedProfitRate: expectedProfitRate,
 		}
 		fmt.Fprintln(writer, cjson.Pretty(buildSummary(app)))
@@ -71,7 +71,7 @@ func startAppListenTcpService(app *service.App) {
 func buildSummary(app *service.App) map[string]interface{} {
 	return map[string]interface{}{
 		"AppearSymbolPairManager": app.AppearSymbolPairManager,
-		"ListeningSymbolPair": app.ListeningSymbolPair,
-		"SymbolPairConf": app.SymbolPairConf,
+		"ListeningSymbolPair":     app.ListeningSymbolPair,
+		"SymbolPairConf":          app.SymbolPairConf,
 	}
 }

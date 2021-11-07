@@ -167,7 +167,7 @@ func processResp(url string, resp interface{}) model.MexcAPIData {
 		mexcAPIData.RawPayload = mexcResp.Data
 	} else {
 		clog.EventLog().WithFields(logrus.Fields{
-			"url": url,
+			"url":  url,
 			"resp": resp,
 		}).Error("request mexc API failed")
 	}
@@ -180,7 +180,7 @@ func buildUrl(apiPath string) string {
 }
 
 func buildHeader(params url.Values, data []byte) http.Header {
-	requestTime := strconv.FormatInt(time.Now().Unix() * 1000, 10)
+	requestTime := strconv.FormatInt(time.Now().Unix()*1000, 10)
 	header := http.Header{}
 	header.Set("Content-Type", "application/json")
 	header.Set("ApiKey", cboot.GV.Config.Api.Mexc.AK)

@@ -39,7 +39,7 @@ func VerboseLog() *logrus.Logger {
 func InitLogOptions(log *logrus.Logger, isDev bool) {
 	log.SetReportCaller(true)
 	formatter := &logrus.TextFormatter{
-		FullTimestamp: true,
+		FullTimestamp:   true,
 		TimestampFormat: time.RFC3339Nano,
 	}
 	log.SetFormatter(formatter)

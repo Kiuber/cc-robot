@@ -43,9 +43,9 @@ func Setup() {
 	if err != nil {
 		logger.Error("connect MySQLClient server failed.")
 	}
-	sqlDB.SetMaxIdleConns(10)                   	// SetMaxIdleConns sets the maximum number of connections in the idle connection pool.
-	sqlDB.SetMaxOpenConns(100)                  	// SetMaxOpenConns sets the maximum number of open connections to the database.
-	sqlDB.SetConnMaxLifetime(time.Second * 600) 	// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
+	sqlDB.SetMaxIdleConns(10)                   // SetMaxIdleConns sets the maximum number of connections in the idle connection pool.
+	sqlDB.SetMaxOpenConns(100)                  // SetMaxOpenConns sets the maximum number of open connections to the database.
+	sqlDB.SetConnMaxLifetime(time.Second * 600) // SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
 	client = conn
 }
 

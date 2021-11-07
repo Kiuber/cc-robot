@@ -3,32 +3,32 @@ package model
 import "math/big"
 
 type MexcResp struct {
-	Code	int
-	Data	interface{}
+	Code int
+	Data interface{}
 }
 
 type MexcAPIData struct {
-	OK	bool
-	Msg string
-	Payload interface{}
+	OK         bool
+	Msg        string
+	Payload    interface{}
 	RawPayload interface{}
 }
 
 type MockAPIData map[string]struct {
 	APIPath string
-	Data string
+	Data    string
 }
 
 type SupportSymbolPair struct {
 	SymbolPairList []string `mapstructure:"symbol"`
-	SymbolPairMap map[string][]string
-	Exchange string
+	SymbolPairMap  map[string][]string
+	Exchange       string
 }
 
 type AppearSymbolPair struct {
-	SymbolPair string
+	SymbolPair  string
 	Symbol1And2 []string
-	Exchange string
+	Exchange    string
 }
 
 type SymbolPairBetterPrice struct {
@@ -52,47 +52,47 @@ type SymbolPairInfoList []struct {
 
 type SymbolPairTickerInfo []struct {
 	SymbolPair string `mapstructure:"symbol"`
-	Volume string `mapstructure:"volume"`
-	High string `mapstructure:"high"`
-	Low string `mapstructure:"low"`
-	Bid string `mapstructure:"bid"`
-	Ask string `mapstructure:"ask"`
-	Open string `mapstructure:"open"`
-	Last string `mapstructure:"last"`
-	Time int64 `mapstructure:"time"`
+	Volume     string `mapstructure:"volume"`
+	High       string `mapstructure:"high"`
+	Low        string `mapstructure:"low"`
+	Bid        string `mapstructure:"bid"`
+	Ask        string `mapstructure:"ask"`
+	Open       string `mapstructure:"open"`
+	Last       string `mapstructure:"last"`
+	Time       int64  `mapstructure:"time"`
 	ChangeRate string `mapstructure:"change_rate"`
 }
 
 type DepthInfo struct {
 	Asks []struct {
-		Price string `mapstructure:"price"`
+		Price    string `mapstructure:"price"`
 		Quantity string `mapstructure:"quantity"`
 	} `json:"asks"`
 	Bids []struct {
-		Price string `mapstructure:"price"`
+		Price    string `mapstructure:"price"`
 		Quantity string `mapstructure:"quantity"`
 	} `json:"bids"`
 }
 
 type Order struct {
-	SymbolPair string `json:"symbol"`
-	Price string `json:"price"`
-	Quantity string `json:"quantity"`
-	TradeType string `json:"trade_type"`
-	OrderType string `json:"order_type"`
+	SymbolPair    string `json:"symbol"`
+	Price         string `json:"price"`
+	Quantity      string `json:"quantity"`
+	TradeType     string `json:"trade_type"`
+	OrderType     string `json:"order_type"`
 	ClientOrderId string `json:"client_order_id"`
 }
 
 type OrderList []struct {
-	ID string `mapstructure:"id"`
-	SymbolPair string `mapstructure:"symbol"`
-	Price string `mapstructure:"price"`
-	Quantity string `mapstructure:"quantity"`
-	State string `mapstructure:"state"`
-	Type string `mapstructure:"type"`
+	ID           string `mapstructure:"id"`
+	SymbolPair   string `mapstructure:"symbol"`
+	Price        string `mapstructure:"price"`
+	Quantity     string `mapstructure:"quantity"`
+	State        string `mapstructure:"state"`
+	Type         string `mapstructure:"type"`
 	DealQuantity string `mapstructure:"deal_quantity"`
 	DealCost     string `mapstructure:"deal_amount"`
-	CreateTime   int64 `mapstructure:"create_time"`
+	CreateTime   int64  `mapstructure:"create_time"`
 }
 
 type AccountInfo map[string]struct {
@@ -101,6 +101,6 @@ type AccountInfo map[string]struct {
 }
 
 type SymbolPairConf struct {
-	BidCost *big.Float
+	BidCost            *big.Float
 	ExpectedProfitRate *big.Float
 }

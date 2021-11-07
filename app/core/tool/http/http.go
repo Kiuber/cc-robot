@@ -47,7 +47,7 @@ func httpDelete(url string, header http.Header, body io.Reader) (resp *http.Resp
 }
 
 func buildRequest(method string, url string, header http.Header, body io.Reader) (resp *http.Request, err error) {
-	req , err := http.NewRequest(method, url, body)
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		clog.VerboseLog().WithFields(logrus.Fields{"err": err}).Error("new request failed")
 	}
@@ -58,9 +58,9 @@ func buildRequest(method string, url string, header http.Header, body io.Reader)
 func doRequest(req *http.Request) (resp *http.Response, err error) {
 	logger := clog.VerboseLog().WithFields(logrus.Fields{
 		"method": req.Method,
-		"url": req.URL,
+		"url":    req.URL,
 		"header": req.Header,
-		"data": req.Body,
+		"data":   req.Body,
 	})
 	logger.Info("request info")
 
@@ -102,7 +102,7 @@ func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err 
 	if err != nil {
 		clog.VerboseLog().WithFields(logrus.Fields{
 			"resp": resp,
-			"err": err,
+			"err":  err,
 		}).Error("jsonify, read response")
 	}
 
