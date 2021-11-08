@@ -5,7 +5,7 @@ import (
 	clog "cc-robot/core/tool/log"
 	"cc-robot/model"
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"math/big"
 )
 
@@ -69,7 +69,7 @@ func (app *App) listenBetterPrice() {
 				}
 				go app.ProcessMexcSymbolPairTicker(appearSymbolPair)
 			} else {
-				clog.EventLog().WithFields(logrus.Fields{"appearSymbolPair": appearSymbolPair}).Error("listen better price exist")
+				clog.EventLog().With(zap.Reflect("appearSymbolPair", appearSymbolPair)).Error("listen better price exist")
 			}
 		}
 	}
@@ -110,9 +110,9 @@ func (app *App) ProcessOrder(symbolPairBetterPrice model.SymbolPairBetterPrice) 
 
 func (app *App) shouldContinueBySupportSymbolPair(symbol1And2 []string) bool {
 	if len(symbol1And2) != 2 {
-		clog.EventLog().WithFields(logrus.Fields{
-			"symbol1And2": symbol1And2,
-		}).Error("not support symbol pair")
+		clog.EventLog().With(
+			zap.Reflect("symbol1And2", symbol1And2),
+		).Error("not support symbol pair")
 		return false
 	}
 
@@ -121,10 +121,10 @@ func (app *App) shouldContinueBySupportSymbolPair(symbol1And2 []string) bool {
 	supportRightSymbol := "USDT"
 	ok := rightSymbol == supportRightSymbol
 	if !ok {
-		clog.EventLog().WithFields(logrus.Fields{
-			"leftSymbol":  leftSymbol,
-			"rightSymbol": rightSymbol,
-		}).Error("not support symbol pair")
+		clog.EventLog().With(
+			zap.String("leftSymbol", leftSymbol),
+			zap.String("rightSymbol", rightSymbol),
+		).Error("not support symbol pair")
 	}
 	return ok
 }

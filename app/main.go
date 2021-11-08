@@ -7,7 +7,7 @@ import (
 	"cc-robot/model"
 	"cc-robot/service"
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"math/big"
 	"net"
 	"net/http"
@@ -36,7 +36,7 @@ func startAppListenTcpService(app *service.App) {
 		panic(err)
 	}
 
-	clog.EventLog().WithFields(logrus.Fields{"addr": listener.Addr().String()}).Info("StartListenTcpService")
+	clog.EventLog().With(zap.String("addr", listener.Addr().String())).Info("StartListenTcpService")
 
 	http.HandleFunc("/check-health", func(writer http.ResponseWriter, request *http.Request) {
 		fmt.Fprintln(writer, request.URL)

@@ -10,7 +10,7 @@ import (
 	mexc "cc-robot/extern"
 	"cc-robot/model"
 	"context"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 	"math/big"
 	"strconv"
@@ -37,10 +37,10 @@ func processMexcAppearSymbolPair(app App) {
 
 	oldSymbolPairCount := len(mexcSupportSymbolPair.SymbolPairList)
 	newSymbolPairCount := len(supportSymbolPair.SymbolPairList)
-	clog.EventLog().WithFields(logrus.Fields{
-		"oldSymbolPairCount": oldSymbolPairCount,
-		"newSymbolPairCount": newSymbolPairCount,
-	}).Info("new and old symbol pair count")
+	clog.EventLog().With(
+		zap.Int("oldSymbolPairCount", oldSymbolPairCount),
+		zap.Int("newSymbolPairCount", newSymbolPairCount),
+	).Info("new and old symbol pair count")
 
 	if newSymbolPairCount > oldSymbolPairCount {
 		if oldSymbolPairCount > 0 {
@@ -58,18 +58,18 @@ func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.Sup
 			limit := int64(5)
 			mexcAPIData := mexc.KLine(symbolPair, "1m", strconv.FormatInt(time.Now().Unix()-((limit+1)*60), 10), strconv.FormatInt(limit, 10))
 			if !mexcAPIData.OK {
-				clog.EventLog().WithFields(logrus.Fields{"msg": mexcAPIData.Msg}).Info("get kline failed")
+				clog.EventLog().With(zap.String("msg", mexcAPIData.Msg)).Info("get kline failed")
 				continue
 			}
 
 			kLineData := mexcAPIData.Payload.([]interface{})
 			if len(kLineData) > 0 {
-				clog.EventLog().WithFields(logrus.Fields{"symbolPair": symbolPair}).Error("It doesn't look like a new symbolPair")
+				clog.EventLog().With(zap.String("symbolPair", symbolPair)).Error("It doesn't look like a new symbolPair")
 				continue
 			}
 
 			appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPair, Symbol1And2: symbol1And2, Exchange: exchange}
-			clog.EventLog().WithFields(logrus.Fields{"appearSymbolPair": appearSymbolPair}).Info("appear symbol pair")
+			clog.EventLog().With(zap.Reflect("appearSymbolPair", appearSymbolPair)).Info("appear symbol pair")
 
 			if _, ok := app.ListeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
 				app.AppearSymbolPairCh <- appearSymbolPair
@@ -122,11 +122,11 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 
 	oldLowestOfAskPrice := app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice
 
-	logger := clog.EventLog().WithFields(logrus.Fields{
-		"symbolPair": appearSymbolPair.SymbolPair,
-		"old price":  app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice,
-		"new price":  lowestOfAskPrice,
-	})
+	logger := clog.EventLog().With(
+		zap.String("symbolPair", appearSymbolPair.SymbolPair),
+		zap.Reflect("old price", app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice),
+		zap.Reflect("new price", lowestOfAskPrice),
+	)
 	if oldLowestOfAskPrice == nil || lowestOfAskPrice.Cmp(oldLowestOfAskPrice) != 0 || !app.adjustOrderFailed[appearSymbolPair.SymbolPair] {
 		// TODO: @qingbao, close previous app.processOrderManagerCh
 		app.processOrderManagerCh <- model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
@@ -141,9 +141,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	symbolPair := symbolPairBetterPrice.AppearSymbolPair.SymbolPair
 	symbolPairConf := app.SymbolPairConf[symbolPair]
 	bidOrderList := getOrderList(symbolPair, "BID")
-	logger := clog.EventLog().WithFields(logrus.Fields{
-		"symbolPair": symbolPair,
-	})
+	logger := clog.EventLog().With(zap.String("symbolPair", symbolPair))
 
 	bidCost := symbolPairConf.BidCost
 	totalDealCost := big.NewFloat(0)
@@ -192,16 +190,16 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		quantity := big.NewFloat(0)
 		quantity.Quo(bidCost, testBidPrice)
 
-		clog.EventLog().WithFields(logrus.Fields{
-			"bidCost":           bidCost,
-			"symbol":            symbolPair,
-			"quantity":          quantity,
-			"lowestOfAskPrice":  lowestOfAskPrice,
-			"testBidPrice":      testBidPrice,
-			"totalDealCost":     totalDealCost,
-			"totalDealCostRate": totalDealCostRate,
-			"totalHoldQuantity": totalHoldQuantity,
-		}).Info("prepare bid detail")
+		clog.EventLog().With(
+			zap.Any("bidCost", bidCost),
+			zap.String("symbol", symbolPair),
+			zap.Any("quantity", quantity),
+			zap.Any("lowestOfAskPrice", lowestOfAskPrice),
+			zap.Any("testBidPrice", testBidPrice),
+			zap.Any("totalDealCost", totalDealCost),
+			zap.Any("totalDealCostRate", totalDealCostRate),
+			zap.Any("totalHoldQuantity", totalHoldQuantity),
+		).Info("prepare bid detail")
 
 		mexcAPIData = adjustPosition(symbolPair, "BID", testBidPrice, quantity)
 		if mexcAPIData.OK {
@@ -228,13 +226,13 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		balanceInfo := accountInfo[symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0]]
 		holdQuantityFloat, err := strconv.ParseFloat(balanceInfo.Available, 64)
 		if err != nil {
-			clog.EventLog().WithFields(logrus.Fields{"account symbol pair info": balanceInfo}).Error("parse float failed")
+			clog.EventLog().With(zap.Reflect("account symbol pair info", balanceInfo)).Error("parse float failed")
 			return
 		}
 		holdQuantity := big.NewFloat(holdQuantityFloat)
 
 		if holdQuantity.Cmp(big.NewFloat(0)) <= 0 {
-			clog.EventLog().WithFields(logrus.Fields{"balanceInfo": balanceInfo}).Error("not hold", holdQuantity.Cmp(big.NewFloat(0)))
+			clog.EventLog().With(zap.Reflect("balanceInfo", balanceInfo)).Error("not hold")
 			return
 		}
 
@@ -248,17 +246,17 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		totalProfitRate.Quo(totalProfit, totalDealCost)
 
 		profitRateDiff.Sub(totalProfitRate, expectedProfitRate)
-		clog.EventLog().WithFields(logrus.Fields{
-			"holdQuantity":       holdQuantity,
-			"totalDealCost":      totalDealCost,
-			"totalHoldCost":      totalHoldCost,
-			"totalProfit":        totalProfit,
-			"totalProfitRate":    totalProfitRate,
-			"expectedProfitRate": expectedProfitRate,
-			"profitRateDiff":     profitRateDiff,
-		}).Info("profit detail")
+		clog.EventLog().With(
+			zap.Reflect("holdQuantity", holdQuantity),
+			zap.Reflect("totalDealCost", totalDealCost),
+			zap.Reflect("totalHoldCost", totalHoldCost),
+			zap.Reflect("totalProfit", totalProfit),
+			zap.Reflect("totalProfitRate", totalProfitRate),
+			zap.Reflect("expectedProfitRate", expectedProfitRate),
+			zap.Reflect("profitRateDiff", profitRateDiff),
+		).Info("profit detail")
 		hasReachProfit := totalProfitRate.Cmp(expectedProfitRate) >= 0
-		logger.Info("has reach expected profit rate: ", hasReachProfit)
+		logger.With(zap.Bool("reached?", hasReachProfit)).Info("has reach expected profit rate")
 		if hasReachProfit {
 			mexcAPIData = adjustPosition(symbolPair, "ASK", testBidPrice, holdQuantity)
 			if mexcAPIData.OK {

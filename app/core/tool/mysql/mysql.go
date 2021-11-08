@@ -4,11 +4,10 @@ import (
 	cboot "cc-robot/core/boot"
 	clog "cc-robot/core/tool/log"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"time"
-
+	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"time"
 )
 
 var client *gorm.DB
@@ -32,7 +31,7 @@ func Setup() {
 	}
 	dialector = mysql.New(config)
 
-	logger := clog.EventLog().WithFields(logrus.Fields{"mysql config": config})
+	logger := clog.EventLog().With(zap.Reflect("mysql config", config))
 
 	conn, err := gorm.Open(dialector, &gorm.Config{})
 	logger.Info("start connect")

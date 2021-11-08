@@ -4,7 +4,7 @@ import (
 	cid "cc-robot/core/tool/id"
 	clog "cc-robot/core/tool/log"
 	"encoding/json"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -49,27 +49,25 @@ func httpDelete(url string, header http.Header, body io.Reader) (resp *http.Resp
 func buildRequest(method string, url string, header http.Header, body io.Reader) (resp *http.Request, err error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		clog.VerboseLog().WithFields(logrus.Fields{"err": err}).Error("new request failed")
+		clog.VerboseLog().With(zap.String("err", err.Error())).Error("new request failed")
 	}
 	req.Header = mergeBasicHeader(req, header)
 	return req, nil
 }
 
 func doRequest(req *http.Request) (resp *http.Response, err error) {
-	logger := clog.VerboseLog().WithFields(logrus.Fields{
-		"method": req.Method,
-		"url":    req.URL,
-		"header": req.Header,
-		"data":   req.Body,
-	})
+	logger := clog.VerboseLog().With(
+		zap.String("method", req.Method),
+		zap.String("url", req.URL.String()),
+		zap.Reflect("header", req.Header),
+		zap.Reflect("data", req.Body),
+	)
 	logger.Info("request info")
 
 	client := http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
-		logger.WithFields(logrus.Fields{
-			"err": err,
-		}).Error("request failed")
+		logger.With(zap.String("err", err.Error())).Error("request failed")
 	}
 
 	return resp, err
@@ -91,29 +89,27 @@ func mergeBasicHeader(req *http.Request, header http.Header) http.Header {
 
 func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err error) {
 	if resp == nil {
-		clog.VerboseLog().WithFields(logrus.Fields{
-			"err": err,
-		}).Error("jsonify, response nil")
+		clog.VerboseLog().With(zap.String("err", err.Error())).Error("jsonify, response nil")
 		return new(interface{}), err
 	}
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	if err != nil {
-		clog.VerboseLog().WithFields(logrus.Fields{
-			"resp": resp,
-			"err":  err,
-		}).Error("jsonify, read response")
+		clog.VerboseLog().With(
+			zap.Reflect("resp", resp),
+			zap.String("err", err.Error()),
+		).Error("jsonify, read response")
 	}
 
 	respStr := string(bodyBytes)
 	err = json.Unmarshal(bodyBytes, &data)
 
-	logger := clog.VerboseLog().WithFields(logrus.Fields{
-		"respStr":           respStr,
-		ExtraRequestIdField: req.Header.Get(ExtraRequestIdField),
-		"err":               err,
-	})
+	logger := clog.VerboseLog().With(
+		zap.String("respStr", respStr),
+		zap.String(ExtraRequestIdField, req.Header.Get(ExtraRequestIdField)),
+		zap.Reflect("err", err),
+	)
 	if err != nil {
 		logger.Error("jsonify failed")
 	} else {

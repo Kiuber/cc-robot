@@ -2,51 +2,68 @@ package clog
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"os"
-	"time"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-var eventLog *logrus.Logger
-var verboseLog *logrus.Logger
+var eventLog *zap.Logger
+var verboseLog *zap.Logger
 
 var logBaseDir = "/opt/data/cc-robot/runtime/logs"
 
-func EventLog() *logrus.Logger {
+func EventLog() *zap.Logger {
 	if eventLog != nil {
 		return eventLog
 	}
-	eventLog = logrus.New()
-	file, err := os.OpenFile(fmt.Sprintf("%s/app-event.log", logBaseDir), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err == nil {
-		eventLog.SetOutput(file)
-	}
+
+	core := zapcore.NewCore(
+		DefaultZapJSONEncoder(),
+		zapcore.AddSync(DefaultSyncWriter("app-event.log")),
+		zap.DebugLevel,
+	)
+	eventLog = zap.New(core, zap.AddCaller())
 	return eventLog
 }
 
-func VerboseLog() *logrus.Logger {
+func VerboseLog() *zap.Logger {
 	if verboseLog != nil {
 		return verboseLog
 	}
-	verboseLog = logrus.New()
-	file, err := os.OpenFile(fmt.Sprintf("%s/app-verbose.log", logBaseDir), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err == nil {
-		verboseLog.SetOutput(file)
-	}
+
+	core := zapcore.NewCore(
+		DefaultZapJSONEncoder(),
+		zapcore.AddSync(DefaultSyncWriter("app-verbose.log")),
+		zap.DebugLevel,
+	)
+	verboseLog = zap.New(core, zap.AddCaller())
 	return verboseLog
 }
 
-func InitLogOptions(log *logrus.Logger, isDev bool) {
-	log.SetReportCaller(true)
-	formatter := &logrus.TextFormatter{
-		FullTimestamp:   true,
-		TimestampFormat: time.RFC3339Nano,
-	}
-	log.SetFormatter(formatter)
+func DefaultSyncWriter(fileName string) zapcore.WriteSyncer {
+	return zapcore.AddSync(&lumberjack.Logger{
+		Filename:   fmt.Sprintf("%s/%s", logBaseDir, fileName),
+		MaxSize:    1024,
+		MaxBackups: 200,
+		MaxAge:     365,
+		Compress:   false,
+		LocalTime:  true,
+	})
+}
 
-	logLevel := logrus.InfoLevel
-	if isDev {
-		logLevel = logrus.DebugLevel
-	}
-	log.SetLevel(logLevel)
+func DefaultZapJSONEncoder() zapcore.Encoder {
+	return zapcore.NewJSONEncoder(zapcore.EncoderConfig{
+		TimeKey:        "ts",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		FunctionKey:    zapcore.OmitKey,
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	})
 }

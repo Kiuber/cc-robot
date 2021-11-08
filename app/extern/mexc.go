@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mitchellh/mapstructure"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -165,12 +165,12 @@ func processResp(url string, resp interface{}, err error) model.MexcAPIData {
 	if mexcResp.Code == 200 {
 		mexcAPIData.OK = true
 		mexcAPIData.RawPayload = mexcResp.Data
-	} else {
+	} else if err != nil {
 		mexcAPIData.Msg = fmt.Sprintf("parse resp failed, error: %s", err.Error())
-		clog.EventLog().WithFields(logrus.Fields{
-			"url":  url,
-			"resp": resp,
-		}).Error("request mexc API failed")
+		clog.EventLog().With(
+			zap.String("url", url),
+			zap.Reflect("resp", resp),
+		).Error("request mexc API failed")
 	}
 
 	return mexcAPIData

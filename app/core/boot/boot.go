@@ -7,7 +7,7 @@ import (
 	"cc-robot/model"
 	"flag"
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -35,8 +35,8 @@ func initEnv() {
 }
 
 func initLog() {
-	clog.InitLogOptions(clog.EventLog(), isDev)
-	clog.InitLogOptions(clog.VerboseLog(), isDev)
+	clog.EventLog()
+	clog.VerboseLog()
 }
 
 func initGV() {
@@ -53,7 +53,7 @@ func initGV() {
 	gv.Config.Api = *api
 	GV = *gv
 
-	clog.EventLog().WithFields(logrus.Fields{"global variable": GV}).Info("initGV")
+	clog.EventLog().With(zap.Reflect("global variable", GV)).Info("initGV")
 }
 
 func RunAppPost() {
@@ -68,7 +68,7 @@ func StartMockListenTcpService() {
 
 	files, err := ioutil.ReadDir("mock/")
 	if err != nil {
-		clog.EventLog().Fatal(err)
+		clog.EventLog().Fatal(err.Error())
 	}
 
 	for _, file := range files {
@@ -97,7 +97,7 @@ func StartMockListenTcpService() {
 		})
 	}
 
-	clog.EventLog().WithFields(logrus.Fields{"addr": listener.Addr().String()}).Info("StartMockListenTcpService")
+	clog.EventLog().With(zap.String("addr", listener.Addr().String())).Info("StartMockListenTcpService")
 	go http.Serve(listener, nil)
 }
 
