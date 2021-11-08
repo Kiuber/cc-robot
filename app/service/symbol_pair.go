@@ -3,6 +3,7 @@ package service
 import (
 	cboot "cc-robot/core/boot"
 	cid "cc-robot/core/tool/id"
+	cinfra "cc-robot/core/tool/infra"
 	clog "cc-robot/core/tool/log"
 	"cc-robot/core/tool/mysql"
 	"cc-robot/core/tool/redis"
@@ -10,6 +11,7 @@ import (
 	mexc "cc-robot/extern"
 	"cc-robot/model"
 	"context"
+	"fmt"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 	"math/big"
@@ -18,9 +20,7 @@ import (
 	"time"
 )
 
-var mexcSupportSymbolPair model.SupportSymbolPair
-
-func processMexcAppearSymbolPair(app App) {
+func fetchSupportSymbolPairs(app App) {
 	mexcAPIData := mexc.SupportSymbolPair()
 	if !mexcAPIData.OK {
 		return
@@ -35,47 +35,57 @@ func processMexcAppearSymbolPair(app App) {
 	}
 	supportSymbolPair.SymbolPairMap = symbolPairMap
 
-	oldSymbolPairCount := len(mexcSupportSymbolPair.SymbolPairList)
-	newSymbolPairCount := len(supportSymbolPair.SymbolPairList)
 	clog.EventLog().With(
-		zap.Int("oldSymbolPairCount", oldSymbolPairCount),
-		zap.Int("newSymbolPairCount", newSymbolPairCount),
-	).Info("new and old symbol pair count")
+		zap.Int("supportSymbolPair count", len(supportSymbolPair.SymbolPairList)),
+	).Info("fetched symbol pairs")
 
-	if newSymbolPairCount > oldSymbolPairCount {
-		if oldSymbolPairCount > 0 {
-			findNewSymbolPairs(app, supportSymbolPair.Exchange, mexcSupportSymbolPair, supportSymbolPair)
-		}
-		persistentSymbolPairs(supportSymbolPair)
-	}
-
-	mexcSupportSymbolPair = supportSymbolPair
+	persistentSymbolPairs(supportSymbolPair)
 }
 
-func findNewSymbolPairs(app App, exchange string, oldSupportSymbolPair model.SupportSymbolPair, newSupportSymbolPair model.SupportSymbolPair) {
-	for symbolPair, symbol1And2 := range newSupportSymbolPair.SymbolPairMap {
-		if _, ok := oldSupportSymbolPair.SymbolPairMap[symbolPair]; !ok {
-			limit := int64(5)
-			mexcAPIData := mexc.KLine(symbolPair, "1m", strconv.FormatInt(time.Now().Unix()-((limit+1)*60), 10), strconv.FormatInt(limit, 10))
-			if !mexcAPIData.OK {
-				clog.EventLog().With(zap.String("msg", mexcAPIData.Msg)).Info("get kline failed")
-				continue
-			}
+func getAppearSymbolPairs(app App) {
+	var exchangeSymbolPairList []dao.ExchangeSymbolPair
+	mysql.MySQLClient().Where("open_timestamp = 0").Find(&exchangeSymbolPairList)
+	clog.EventLog().With(zap.Int("exchangeSymbolPairList count", len(exchangeSymbolPairList))).Info("not open symbol pair yet")
 
-			kLineData := mexcAPIData.Payload.([]interface{})
-			if len(kLineData) > 0 {
-				clog.EventLog().With(zap.String("symbolPair", symbolPair)).Error("It doesn't look like a new symbolPair")
-				continue
-			}
+	for _, pair := range exchangeSymbolPairList {
+		logger := clog.EventLog().With(zap.String("symbolPair", pair.SymbolPair))
 
-			appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPair, Symbol1And2: symbol1And2, Exchange: exchange}
-			clog.EventLog().With(zap.Reflect("appearSymbolPair", appearSymbolPair)).Info("appear symbol pair")
-
-			if _, ok := app.ListeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
-				app.AppearSymbolPairCh <- appearSymbolPair
-				app.AppearSymbolPairManager[symbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair}
-			}
+		mexcAPIData := mexc.SymbolPairInfo(pair.SymbolPair)
+		if !mexcAPIData.OK {
+			logger.With(zap.String("err", mexcAPIData.Msg)).Error("get symbol pair info failed")
+			continue
 		}
+
+		symbolPairInfo := mexcAPIData.Payload.(model.SymbolPairInfo)
+		symbolPairInfo.WebLink = "https://www.mexc.com/zh-CN/exchange"
+		if len(symbolPairInfo.OpenTime) == 0 {
+			limit := int64(5)
+			mexcAPIData = mexc.KLine(pair.SymbolPair, "1m", strconv.FormatInt(time.Now().Unix()-((limit+1)*60), 10), strconv.FormatInt(limit, 10))
+			if mexcAPIData.OK {
+				kLineData := mexcAPIData.Payload.([]interface{})
+				if len(kLineData) > 0 {
+					logger.Error("has kline data but no openTime")
+				}
+			} else {
+				logger.With(zap.String("msg", mexcAPIData.Msg)).Info("get kline failed")
+			}
+			continue
+		}
+
+		openTime, err := time.ParseInLocation(time.RFC3339, symbolPairInfo.OpenTime, time.Local)
+		if err != nil {
+			logger.With(zap.String("err", err.Error())).Error("parse time failed")
+			continue
+		}
+
+		var exchangeSymbolPair dao.ExchangeSymbolPair
+		exchangeSymbolPair.ExchangeName = pair.ExchangeName
+		exchangeSymbolPair.OpenTimestamp = int(openTime.Unix())
+		if openTime.Unix() > time.Now().Unix() {
+			cinfra.GiantEventText(fmt.Sprintf("%s appear %s/%s", pair.ExchangeName, symbolPairInfo.WebLink, pair.SymbolPair))
+		}
+
+		mysql.MySQLClient().Where("symbol_pair = ?", pair.SymbolPair).Updates(exchangeSymbolPair)
 	}
 }
 
@@ -89,7 +99,7 @@ func persistentSymbolPairs(supportSymbolPair model.SupportSymbolPair) {
 		}
 
 		mysql.MySQLClient().Clauses(clause.OnConflict{
-			UpdateAll: true,
+			DoNothing: true,
 		}).Create(&exchangeSymbolPair)
 	}
 }

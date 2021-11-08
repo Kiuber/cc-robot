@@ -1,10 +1,13 @@
 package model
 
-import "math/big"
+import (
+	"math/big"
+)
 
 type MexcResp struct {
 	Code int
 	Data interface{}
+	Msg  string
 }
 
 type MexcAPIData struct {
@@ -25,10 +28,16 @@ type SupportSymbolPair struct {
 	Exchange       string
 }
 
+type SymbolPairInfo struct {
+	SymbolPair string
+	WebLink    string
+	OpenTime   string `mapstructure:"openTime"`
+}
+
 type AppearSymbolPair struct {
-	SymbolPair  string
-	Symbol1And2 []string
-	Exchange    string
+	SymbolPair   string
+	Symbol1And2  []string
+	ExchangeName string
 }
 
 type SymbolPairBetterPrice struct {

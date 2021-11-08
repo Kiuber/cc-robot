@@ -3,6 +3,7 @@ CREATE TABLE `s_cc_exchange_symbol_pair` (
     `symbol_pair` varchar(20) binary NOT NULL DEFAULT '',
     `symbol1` varchar(20) binary NOT NULL DEFAULT '',
     `symbol2` varchar(20) binary NOT NULL DEFAULT '',
+    `open_timestamp` int NOT NULL DEFAULT 0,
     `ctime` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
     `mtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY (`exchange_name`, `symbol_pair`)

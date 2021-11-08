@@ -3,12 +3,13 @@ package dao
 import "time"
 
 type ExchangeSymbolPair struct {
-	ExchangeName string
-	SymbolPair   string
-	Symbol1      string
-	Symbol2      string
-	CreatedAt    time.Time `gorm:"column:ctime"`
-	UpdatedAt    time.Time `gorm:"column:mtime"`
+	ExchangeName  string
+	SymbolPair    string
+	Symbol1       string
+	Symbol2       string
+	OpenTimestamp int
+	CreatedAt     time.Time `gorm:"column:ctime"`
+	UpdatedAt     time.Time `gorm:"column:mtime"`
 }
 
 func (ExchangeSymbolPair) TableName() string {

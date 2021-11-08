@@ -48,7 +48,10 @@ func startAppListenTcpService(app *service.App) {
 		symbolPairParam := request.URL.Query().Get("symbol_pair")
 		symbol1And2 := strings.Split(symbolPairParam, "_")
 		appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPairParam, Symbol1And2: symbol1And2}
+
 		app.AcquireBetterPriceCh <- appearSymbolPair
+		app.AppearSymbolPairManager[symbolPairParam] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair}
+
 		fmt.Fprintln(writer, cjson.Pretty(buildSummary(app)))
 	})
 	http.HandleFunc("/update-symbol-pair-conf", func(writer http.ResponseWriter, request *http.Request) {

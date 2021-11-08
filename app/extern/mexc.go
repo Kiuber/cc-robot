@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -121,6 +122,17 @@ func KLine(symbolPair string, interval string, startTime string, limit string) m
 	return mexcAPIData
 }
 
+func SymbolPairInfo(symbolPair string) model.MexcAPIData {
+	params := url.Values{}
+	params.Set("symbol", symbolPair)
+	mexcAPIData := mexcGetJson("api/platform/spot/market/symbol", params)
+	symbolPairInfo := new(model.SymbolPairInfo)
+	mapstructure.Decode(mexcAPIData.RawPayload, &symbolPairInfo)
+	symbolPairInfo.SymbolPair = symbolPair
+	mexcAPIData.Payload = *symbolPairInfo
+	return mexcAPIData
+}
+
 func mexcGetJson(apiPath string, params url.Values) model.MexcAPIData {
 	url := buildUrl(apiPath)
 	header := buildHeader(params, nil)
@@ -171,13 +183,19 @@ func processResp(url string, resp interface{}, err error) model.MexcAPIData {
 			zap.String("url", url),
 			zap.Reflect("resp", resp),
 		).Error("request mexc API failed")
+	} else if mexcResp.Code != 200 {
+		mexcAPIData.Msg = mexcResp.Msg
 	}
 
 	return mexcAPIData
 }
 
 func buildUrl(apiPath string) string {
-	return fmt.Sprintf("%s/%s", cboot.GV.Config.Api.Mexc.BaseURL, apiPath)
+	if strings.HasPrefix(apiPath, "api/") {
+		return fmt.Sprintf("%s/%s", "https://mexc.com", apiPath)
+	} else {
+		return fmt.Sprintf("%s/%s", cboot.GV.Config.Api.Mexc.BaseURL, apiPath)
+	}
 }
 
 func buildHeader(params url.Values, data []byte) http.Header {

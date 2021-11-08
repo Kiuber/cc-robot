@@ -1,12 +1,11 @@
 package service
 
 import (
-	cinfra "cc-robot/core/tool/infra"
 	clog "cc-robot/core/tool/log"
 	"cc-robot/model"
-	"fmt"
 	"go.uber.org/zap"
 	"math/big"
+	"time"
 )
 
 type App struct {
@@ -40,20 +39,11 @@ func initApp() *App {
 }
 
 func (app *App) initLogic() {
-	go app.ProcessMexcAppearSymbolPair()
-	go app.listenAppearSymbolPair()
+	go app.FetchSupportSymbolPairs()
+	go app.GetAppearSymbolPairs()
+
 	go app.listenBetterPrice()
 	go app.listenOrderManager()
-}
-
-func (app *App) listenAppearSymbolPair() {
-	for {
-		select {
-		case appearSymbolPair := <-app.AppearSymbolPairCh:
-			cinfra.GiantEventText(fmt.Sprintf("%s appear %s symbol pair", appearSymbolPair.Exchange, appearSymbolPair.SymbolPair))
-			app.AcquireBetterPriceCh <- appearSymbolPair
-		}
-	}
 }
 
 func (app *App) listenBetterPrice() {
@@ -84,9 +74,17 @@ func (app *App) listenOrderManager() {
 	}
 }
 
-func (app *App) ProcessMexcAppearSymbolPair() {
+func (app *App) FetchSupportSymbolPairs() {
 	for {
-		processMexcAppearSymbolPair(*app)
+		fetchSupportSymbolPairs(*app)
+		time.Sleep(10 * time.Minute)
+	}
+}
+
+func (app *App) GetAppearSymbolPairs() {
+	for {
+		getAppearSymbolPairs(*app)
+		time.Sleep(10 * time.Minute)
 	}
 }
 
