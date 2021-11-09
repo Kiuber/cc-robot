@@ -82,7 +82,8 @@ func getAppearSymbolPairs(app App) {
 		exchangeSymbolPair.ExchangeName = pair.ExchangeName
 		exchangeSymbolPair.OpenTimestamp = int(openTime.Unix())
 		if openTime.Unix() > time.Now().Unix() {
-			cinfra.GiantEventText(fmt.Sprintf("%s appear %s/%s", pair.ExchangeName, symbolPairInfo.WebLink, pair.SymbolPair))
+			msg := fmt.Sprintf("%s appear %s/%s, open time: %s", pair.ExchangeName, symbolPairInfo.WebLink, pair.SymbolPair, openTime)
+			cinfra.GiantEventText(msg)
 		}
 
 		mysql.MySQLClient().Where("symbol_pair = ?", pair.SymbolPair).Updates(exchangeSymbolPair)
