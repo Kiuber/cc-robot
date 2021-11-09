@@ -11,7 +11,7 @@ import (
 func LoadConfig(configFname string, out interface{}) {
 	file, err := ioutil.ReadFile(fmt.Sprintf("config/%s", configFname))
 
-	logger := clog.EventLog().With(zap.String(configFname, configFname))
+	logger := clog.EventLog.With(zap.String(configFname, configFname))
 
 	if err != nil {
 		logger.Error("LoadConfig ReadFile err")

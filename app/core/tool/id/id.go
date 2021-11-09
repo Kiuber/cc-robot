@@ -11,7 +11,7 @@ func UniuqeId() string {
 	flake := sonyflake.NewSonyflake(sonyflake.Settings{})
 	id, err := flake.NextID()
 	if err != nil {
-		clog.EventLog().With(zap.String("err", err.Error())).Error("nextID")
+		clog.EventLog.With(zap.String("err", err.Error())).Error("nextID")
 	}
 	return strconv.FormatUint(id, 10)
 }

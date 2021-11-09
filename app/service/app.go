@@ -19,7 +19,7 @@ type App struct {
 }
 
 func RunApp() *App {
-	clog.EventLog().Info("run app")
+	clog.EventLog.Info("run app")
 	app := initApp()
 	go app.initLogic()
 	return app
@@ -59,7 +59,7 @@ func (app *App) listenBetterPrice() {
 				}
 				go app.ProcessMexcSymbolPairTicker(appearSymbolPair)
 			} else {
-				clog.EventLog().With(zap.Reflect("appearSymbolPair", appearSymbolPair)).Error("listen better price exist")
+				clog.EventLog.With(zap.Reflect("appearSymbolPair", appearSymbolPair)).Error("listen better price exist")
 			}
 		}
 	}
@@ -108,7 +108,7 @@ func (app *App) ProcessOrder(symbolPairBetterPrice model.SymbolPairBetterPrice) 
 
 func (app *App) shouldContinueBySupportSymbolPair(symbol1And2 []string) bool {
 	if len(symbol1And2) != 2 {
-		clog.EventLog().With(
+		clog.EventLog.With(
 			zap.Reflect("symbol1And2", symbol1And2),
 		).Error("not support symbol pair")
 		return false
@@ -119,7 +119,7 @@ func (app *App) shouldContinueBySupportSymbolPair(symbol1And2 []string) bool {
 	supportRightSymbol := "USDT"
 	ok := rightSymbol == supportRightSymbol
 	if !ok {
-		clog.EventLog().With(
+		clog.EventLog.With(
 			zap.String("leftSymbol", leftSymbol),
 			zap.String("rightSymbol", rightSymbol),
 		).Error("not support symbol pair")

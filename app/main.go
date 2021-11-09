@@ -36,7 +36,7 @@ func startAppListenTcpService(app *service.App) {
 		panic(err)
 	}
 
-	clog.EventLog().With(zap.String("addr", listener.Addr().String())).Info("StartListenTcpService")
+	clog.EventLog.With(zap.String("addr", listener.Addr().String())).Info("StartListenTcpService")
 
 	http.HandleFunc("/check-health", func(writer http.ResponseWriter, request *http.Request) {
 		fmt.Fprintln(writer, request.URL)

@@ -49,14 +49,14 @@ func httpDelete(url string, header http.Header, body io.Reader) (resp *http.Resp
 func buildRequest(method string, url string, header http.Header, body io.Reader) (resp *http.Request, err error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		clog.VerboseLog().With(zap.String("err", err.Error())).Error("new request failed")
+		clog.VerboseLog.With(zap.String("err", err.Error())).Error("new request failed")
 	}
 	req.Header = mergeBasicHeader(req, header)
 	return req, nil
 }
 
 func doRequest(req *http.Request) (resp *http.Response, err error) {
-	logger := clog.VerboseLog().With(
+	logger := clog.VerboseLog.With(
 		zap.String("method", req.Method),
 		zap.String("url", req.URL.String()),
 		zap.Reflect("header", req.Header),
@@ -89,14 +89,14 @@ func mergeBasicHeader(req *http.Request, header http.Header) http.Header {
 
 func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err error) {
 	if resp == nil {
-		clog.VerboseLog().With(zap.String("err", err.Error())).Error("jsonify, response nil")
+		clog.VerboseLog.With(zap.String("err", err.Error())).Error("jsonify, response nil")
 		return new(interface{}), err
 	}
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	if err != nil {
-		clog.VerboseLog().With(
+		clog.VerboseLog.With(
 			zap.Reflect("resp", resp),
 			zap.String("err", err.Error()),
 		).Error("jsonify, read response")
@@ -105,7 +105,7 @@ func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err 
 	respStr := string(bodyBytes)
 	err = json.Unmarshal(bodyBytes, &data)
 
-	logger := clog.VerboseLog().With(
+	logger := clog.VerboseLog.With(
 		zap.String("respStr", respStr),
 		zap.String(ExtraRequestIdField, req.Header.Get(ExtraRequestIdField)),
 		zap.Reflect("err", err),

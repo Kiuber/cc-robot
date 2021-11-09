@@ -7,37 +7,47 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-var eventLog *zap.Logger
-var verboseLog *zap.Logger
+var EventLog *zap.Logger
+var VerboseLog *zap.Logger
 
 var logBaseDir = "/opt/data/cc-robot/runtime/logs"
 
-func EventLog() *zap.Logger {
-	if eventLog != nil {
-		return eventLog
+func InitEventLog(isDev bool) *zap.Logger {
+	if EventLog != nil {
+		return EventLog
+	}
+
+	logLevel := zap.InfoLevel
+	if isDev {
+		logLevel = zap.DebugLevel
 	}
 
 	core := zapcore.NewCore(
 		DefaultZapJSONEncoder(),
 		zapcore.AddSync(DefaultSyncWriter("app-event.log")),
-		zap.DebugLevel,
+		logLevel,
 	)
-	eventLog = zap.New(core, zap.AddCaller())
-	return eventLog
+	EventLog = zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.WarnLevel))
+	return EventLog
 }
 
-func VerboseLog() *zap.Logger {
-	if verboseLog != nil {
-		return verboseLog
+func InitVerboseLog(isDev bool) *zap.Logger {
+	if VerboseLog != nil {
+		return VerboseLog
+	}
+
+	logLevel := zap.InfoLevel
+	if isDev {
+		logLevel = zap.DebugLevel
 	}
 
 	core := zapcore.NewCore(
 		DefaultZapJSONEncoder(),
 		zapcore.AddSync(DefaultSyncWriter("app-verbose.log")),
-		zap.DebugLevel,
+		logLevel,
 	)
-	verboseLog = zap.New(core, zap.AddCaller())
-	return verboseLog
+	VerboseLog = zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.WarnLevel))
+	return VerboseLog
 }
 
 func DefaultSyncWriter(fileName string) zapcore.WriteSyncer {
@@ -52,7 +62,7 @@ func DefaultSyncWriter(fileName string) zapcore.WriteSyncer {
 }
 
 func DefaultZapJSONEncoder() zapcore.Encoder {
-	return zapcore.NewJSONEncoder(zapcore.EncoderConfig{
+	return zapcore.NewConsoleEncoder(zapcore.EncoderConfig{
 		TimeKey:        "ts",
 		LevelKey:       "level",
 		NameKey:        "logger",
@@ -61,7 +71,7 @@ func DefaultZapJSONEncoder() zapcore.Encoder {
 		MessageKey:     "msg",
 		StacktraceKey:  "stacktrace",
 		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeLevel:    zapcore.CapitalColorLevelEncoder,
 		EncodeTime:     zapcore.ISO8601TimeEncoder,
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,

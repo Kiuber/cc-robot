@@ -35,7 +35,7 @@ func fetchSupportSymbolPairs(app App) {
 	}
 	supportSymbolPair.SymbolPairMap = symbolPairMap
 
-	clog.EventLog().With(
+	clog.EventLog.With(
 		zap.Int("supportSymbolPair count", len(supportSymbolPair.SymbolPairList)),
 	).Info("fetched symbol pairs")
 
@@ -45,14 +45,14 @@ func fetchSupportSymbolPairs(app App) {
 func getAppearSymbolPairs(app App) {
 	var exchangeSymbolPairList []dao.ExchangeSymbolPair
 	mysql.MySQLClient().Where("open_timestamp = 0").Find(&exchangeSymbolPairList)
-	clog.EventLog().With(zap.Int("exchangeSymbolPairList count", len(exchangeSymbolPairList))).Info("not open symbol pair yet")
+	clog.EventLog.With(zap.Int("exchangeSymbolPairList count", len(exchangeSymbolPairList))).Info("not open symbol pair yet")
 
 	for _, pair := range exchangeSymbolPairList {
-		logger := clog.EventLog().With(zap.String("symbolPair", pair.SymbolPair))
+		logger := clog.EventLog.With(zap.String("symbolPair", pair.SymbolPair))
 
 		mexcAPIData := mexc.SymbolPairInfo(pair.SymbolPair)
 		if !mexcAPIData.OK {
-			logger.With(zap.String("err", mexcAPIData.Msg)).Error("get symbol pair info failed")
+			logger.With(zap.String("err", mexcAPIData.Msg)).Debug("get symbol pair info failed")
 			continue
 		}
 
@@ -64,10 +64,10 @@ func getAppearSymbolPairs(app App) {
 			if mexcAPIData.OK {
 				kLineData := mexcAPIData.Payload.([]interface{})
 				if len(kLineData) > 0 {
-					logger.Error("has kline data but no openTime")
+					logger.Debug("has kline data but no openTime")
 				}
 			} else {
-				logger.With(zap.String("msg", mexcAPIData.Msg)).Info("get kline failed")
+				logger.With(zap.String("msg", mexcAPIData.Msg)).Debug("get kline failed")
 			}
 			continue
 		}
@@ -114,25 +114,25 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 
 	asks := depthInfo.Asks
 	if asks == nil {
-		clog.EventLog().Error("asks is nil")
+		clog.EventLog.Error("asks is nil")
 		return
 	}
 	if len(asks) <= 0 {
-		clog.EventLog().Info("asks is empty")
+		clog.EventLog.Info("asks is empty")
 		return
 	}
 
 	lowestOfAsk := asks[0]
 	float, err := strconv.ParseFloat(lowestOfAsk.Price, 64)
 	if err != nil {
-		clog.EventLog().Error("parse float failed")
+		clog.EventLog.Error("parse float failed")
 		return
 	}
 	lowestOfAskPrice := big.NewFloat(float)
 
 	oldLowestOfAskPrice := app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice
 
-	logger := clog.EventLog().With(
+	logger := clog.EventLog.With(
 		zap.String("symbolPair", appearSymbolPair.SymbolPair),
 		zap.Reflect("old price", app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice),
 		zap.Reflect("new price", lowestOfAskPrice),
@@ -151,7 +151,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	symbolPair := symbolPairBetterPrice.AppearSymbolPair.SymbolPair
 	symbolPairConf := app.SymbolPairConf[symbolPair]
 	bidOrderList := getOrderList(symbolPair, "BID")
-	logger := clog.EventLog().With(zap.String("symbolPair", symbolPair))
+	logger := clog.EventLog.With(zap.String("symbolPair", symbolPair))
 
 	bidCost := symbolPairConf.BidCost
 	totalDealCost := big.NewFloat(0)
@@ -200,7 +200,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		quantity := big.NewFloat(0)
 		quantity.Quo(bidCost, testBidPrice)
 
-		clog.EventLog().With(
+		clog.EventLog.With(
 			zap.Any("bidCost", bidCost),
 			zap.String("symbol", symbolPair),
 			zap.Any("quantity", quantity),
@@ -236,13 +236,13 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		balanceInfo := accountInfo[symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0]]
 		holdQuantityFloat, err := strconv.ParseFloat(balanceInfo.Available, 64)
 		if err != nil {
-			clog.EventLog().With(zap.Reflect("account symbol pair info", balanceInfo)).Error("parse float failed")
+			clog.EventLog.With(zap.Reflect("account symbol pair info", balanceInfo)).Error("parse float failed")
 			return
 		}
 		holdQuantity := big.NewFloat(holdQuantityFloat)
 
 		if holdQuantity.Cmp(big.NewFloat(0)) <= 0 {
-			clog.EventLog().With(zap.Reflect("balanceInfo", balanceInfo)).Error("not hold")
+			clog.EventLog.With(zap.Reflect("balanceInfo", balanceInfo)).Error("not hold")
 			return
 		}
 
@@ -256,7 +256,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		totalProfitRate.Quo(totalProfit, totalDealCost)
 
 		profitRateDiff.Sub(totalProfitRate, expectedProfitRate)
-		clog.EventLog().With(
+		clog.EventLog.With(
 			zap.Reflect("holdQuantity", holdQuantity),
 			zap.Reflect("totalDealCost", totalDealCost),
 			zap.Reflect("totalHoldCost", totalHoldCost),

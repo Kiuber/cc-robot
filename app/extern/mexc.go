@@ -179,7 +179,7 @@ func processResp(url string, resp interface{}, err error) model.MexcAPIData {
 		mexcAPIData.RawPayload = mexcResp.Data
 	} else if err != nil {
 		mexcAPIData.Msg = fmt.Sprintf("parse resp failed, error: %s", err.Error())
-		clog.EventLog().With(
+		clog.EventLog.With(
 			zap.String("url", url),
 			zap.Reflect("resp", resp),
 		).Error("request mexc API failed")

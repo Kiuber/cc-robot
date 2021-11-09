@@ -31,7 +31,7 @@ func Setup() {
 	}
 	dialector = mysql.New(config)
 
-	logger := clog.EventLog().With(zap.Reflect("mysql config", config))
+	logger := clog.EventLog.With(zap.Reflect("mysql config", config))
 
 	conn, err := gorm.Open(dialector, &gorm.Config{})
 	logger.Info("start connect")
@@ -55,7 +55,7 @@ func MySQLClient() *gorm.DB {
 
 	sqlDB, err := client.DB()
 	if err != nil {
-		clog.EventLog().Error("connect MySQLClient server failed.")
+		clog.EventLog.Error("connect MySQLClient server failed.")
 		Setup()
 	}
 	if err := sqlDB.Ping(); err != nil {
