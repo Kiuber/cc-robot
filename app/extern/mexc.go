@@ -1,4 +1,4 @@
-package mexc
+package emexc
 
 import (
 	"bytes"

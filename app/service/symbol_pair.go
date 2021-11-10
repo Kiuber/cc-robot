@@ -8,7 +8,7 @@ import (
 	"cc-robot/core/tool/mysql"
 	"cc-robot/core/tool/redis"
 	"cc-robot/dao"
-	mexc "cc-robot/extern"
+	emexc "cc-robot/extern"
 	"cc-robot/model"
 	"context"
 	"errors"
@@ -22,7 +22,7 @@ import (
 )
 
 func fetchSupportSymbolPairs(app App) {
-	mexcAPIData := mexc.SupportSymbolPair()
+	mexcAPIData := emexc.SupportSymbolPair()
 	if !mexcAPIData.OK {
 		return
 	}
@@ -51,7 +51,7 @@ func getAppearSymbolPairs(app App) {
 	for _, pair := range exchangeSymbolPairList {
 		logger := clog.EventLog.With(zap.String("symbolPair", pair.SymbolPair))
 
-		mexcAPIData := mexc.SymbolPairInfo(pair.SymbolPair)
+		mexcAPIData := emexc.SymbolPairInfo(pair.SymbolPair)
 		if !mexcAPIData.OK {
 			logger.With(zap.String("err", mexcAPIData.Msg)).Debug("get symbol pair info failed")
 			continue
@@ -61,7 +61,7 @@ func getAppearSymbolPairs(app App) {
 		symbolPairInfo.WebLink = "https://www.mexc.com/zh-CN/exchange"
 		if len(symbolPairInfo.OpenTime) == 0 {
 			limit := int64(5)
-			mexcAPIData = mexc.KLine(pair.SymbolPair, "1m", strconv.FormatInt(time.Now().Unix()-((limit+1)*60), 10), strconv.FormatInt(limit, 10))
+			mexcAPIData = emexc.KLine(pair.SymbolPair, "1m", strconv.FormatInt(time.Now().Unix()-((limit+1)*60), 10), strconv.FormatInt(limit, 10))
 			if mexcAPIData.OK {
 				kLineData := mexcAPIData.Payload.([]interface{})
 				if len(kLineData) > 0 {
@@ -107,7 +107,7 @@ func persistentSymbolPairs(supportSymbolPair model.SupportSymbolPair) {
 }
 
 func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPair) {
-	mexcAPIData := mexc.DepthInfo(appearSymbolPair.SymbolPair, "5")
+	mexcAPIData := emexc.DepthInfo(appearSymbolPair.SymbolPair, "5")
 	if !mexcAPIData.OK {
 		return
 	}
@@ -180,7 +180,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	lowestOfAskPrice := symbolPairBetterPrice.LowestOfAskPrice
 
 	// cancel all orders of the symbol pair
-	mexcAPIData := mexc.CancelOrder(symbolPair)
+	mexcAPIData := emexc.CancelOrder(symbolPair)
 	if !mexcAPIData.OK {
 		logger.Error("cancel order failed")
 		app.adjustOrderFailed[symbolPair] = false
@@ -230,7 +230,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 			logger.Error("lowest ask price is <= 0")
 			return
 		}
-		mexcAPIData = mexc.AccountInfo()
+		mexcAPIData = emexc.AccountInfo()
 		accountInfo := mexcAPIData.Payload.(model.AccountInfo)
 		if _, ok := accountInfo[symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0]]; !ok {
 			logger.Info("not hold")
@@ -285,7 +285,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 }
 
 func adjustPosition(symbolPair string, tradeType string, price *big.Float, quantity *big.Float) model.MexcAPIData {
-	mexcAPIData := mexc.CreateOrder(model.Order{
+	mexcAPIData := emexc.CreateOrder(model.Order{
 		SymbolPair:    symbolPair,
 		Price:         price.String(),
 		Quantity:      quantity.String(),
@@ -299,7 +299,7 @@ func adjustPosition(symbolPair string, tradeType string, price *big.Float, quant
 func getOrderList(symbolPair string, tradeType string) (orderList model.OrderList, err error) {
 	states := []string{"FILLED", "PARTIALLY_FILLED", "PARTIALLY_CANCELED"}
 	for _, state := range states {
-		mexcAPIData := mexc.OrderList(symbolPair, tradeType, state, "1000", "")
+		mexcAPIData := emexc.OrderList(symbolPair, tradeType, state, "1000", "")
 		if !mexcAPIData.OK {
 			return nil, errors.New("order list inconsistency: " + mexcAPIData.Msg)
 		}
