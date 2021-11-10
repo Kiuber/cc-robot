@@ -11,6 +11,7 @@ import (
 	mexc "cc-robot/extern"
 	"cc-robot/model"
 	"context"
+	"errors"
 	"fmt"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
@@ -151,8 +152,13 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice) {
 	symbolPair := symbolPairBetterPrice.AppearSymbolPair.SymbolPair
 	symbolPairConf := app.SymbolPairConf[symbolPair]
-	bidOrderList := getOrderList(symbolPair, "BID")
 	logger := clog.EventLog.With(zap.String("symbolPair", symbolPair))
+
+	bidOrderList, err := getOrderList(symbolPair, "BID")
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
 
 	bidCost := symbolPairConf.BidCost
 	totalDealCost := big.NewFloat(0)
@@ -295,12 +301,14 @@ func adjustPosition(symbolPair string, tradeType string, price *big.Float, quant
 	return mexcAPIData
 }
 
-func getOrderList(symbolPair string, tradeType string) model.OrderList {
-	var orderList model.OrderList
+func getOrderList(symbolPair string, tradeType string) (orderList model.OrderList, err error) {
 	states := []string{"FILLED", "PARTIALLY_FILLED", "PARTIALLY_CANCELED"}
 	for _, state := range states {
 		mexcAPIData := mexc.OrderList(symbolPair, tradeType, state, "1000", "")
+		if !mexcAPIData.OK {
+			return nil, errors.New("order list inconsistency")
+		}
 		orderList = append(orderList, mexcAPIData.Payload.(model.OrderList)...)
 	}
-	return orderList
+	return orderList, nil
 }
