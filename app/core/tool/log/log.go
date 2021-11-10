@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
+	"log"
 )
 
 var EventLog *zap.Logger
@@ -52,9 +53,9 @@ func InitVerboseLog(isDev bool) *zap.Logger {
 
 func DefaultSyncWriter(fileName string) zapcore.WriteSyncer {
 	return zapcore.AddSync(&lumberjack.Logger{
-		Filename:   fmt.Sprintf("%s/%s", logBaseDir, fileName),
-		MaxSize:    1024,
-		MaxBackups: 200,
+		Filename:   buildLogPath(fileName),
+		MaxSize:    32,
+		MaxBackups: 1024,
 		MaxAge:     365,
 		Compress:   false,
 		LocalTime:  true,
@@ -76,4 +77,10 @@ func DefaultZapJSONEncoder() zapcore.Encoder {
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	})
+}
+
+func buildLogPath(fileName string) string {
+	path := fmt.Sprintf("%s/%s", logBaseDir, fileName)
+	log.Printf("log path: %s", path)
+	return path
 }

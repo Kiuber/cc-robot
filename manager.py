@@ -57,6 +57,13 @@ class App(DevOpsApp):
     def stop_dev(self):
         self.shell_run('screen -ls | grep %s | cut -d . -f 1 | xargs pkill -TERM -P ' % self.dev_screen_name, exit_on_error=False)
 
+    def exec_curl_in_container(self, path):
+        self._exec_cmd_in_container('curl 0:3333/%s' % path)
+
+    def _exec_cmd_in_container(self, cmd):
+        shell_cmd = "docker exec -i %s sh -c '%s'" % (self.prod_container, cmd)
+        self.shell_run(shell_cmd)
+
     def _prepare_runtime(self, env):
         self._prepare_runtime_config('api.yaml', env)
 

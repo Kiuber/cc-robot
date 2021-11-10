@@ -144,8 +144,6 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 		app.processOrderManagerCh <- model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
 		app.AppearSymbolPairManager[appearSymbolPair.SymbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
 		logger.Info("better price need update")
-	} else {
-		logger.Info("better price not need update")
 	}
 }
 
@@ -188,7 +186,6 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		app.adjustOrderFailed[symbolPair] = false
 		return
 	} else {
-		logger.Info("cancel order succeed")
 		app.adjustOrderFailed[symbolPair] = true
 	}
 
@@ -257,12 +254,12 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		totalProfit := big.NewFloat(0)
 		totalProfitRate := big.NewFloat(0)
 		expectedProfitRate := symbolPairConf.ExpectedProfitRate
-		profitRateDiff := big.NewFloat(0)
+		withExpectedProfitRateDiff := big.NewFloat(0)
 		totalHoldCost.Mul(testBidPrice, holdQuantity)
 		totalProfit.Sub(totalHoldCost, totalDealCost)
 		totalProfitRate.Quo(totalProfit, totalDealCost)
 
-		profitRateDiff.Sub(totalProfitRate, expectedProfitRate)
+		withExpectedProfitRateDiff.Sub(totalProfitRate, expectedProfitRate)
 		clog.EventLog.With(
 			zap.Reflect("holdQuantity", holdQuantity),
 			zap.Reflect("totalDealCost", totalDealCost),
@@ -270,7 +267,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 			zap.Reflect("totalProfit", totalProfit),
 			zap.Reflect("totalProfitRate", totalProfitRate),
 			zap.Reflect("expectedProfitRate", expectedProfitRate),
-			zap.Reflect("profitRateDiff", profitRateDiff),
+			zap.Reflect("withExpectedProfitRateDiff", withExpectedProfitRateDiff),
 		).Info("profit detail")
 		hasReachProfit := totalProfitRate.Cmp(expectedProfitRate) >= 0
 		logger.With(zap.Bool("reached?", hasReachProfit)).Info("has reach expected profit rate")
@@ -283,8 +280,6 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 				logger.Error("create order is failed")
 				app.adjustOrderFailed[symbolPair] = false
 			}
-		} else {
-			logger.Info("not reach expected profit rate")
 		}
 	}
 }
@@ -306,7 +301,7 @@ func getOrderList(symbolPair string, tradeType string) (orderList model.OrderLis
 	for _, state := range states {
 		mexcAPIData := mexc.OrderList(symbolPair, tradeType, state, "1000", "")
 		if !mexcAPIData.OK {
-			return nil, errors.New("order list inconsistency")
+			return nil, errors.New("order list inconsistency: " + mexcAPIData.Msg)
 		}
 		orderList = append(orderList, mexcAPIData.Payload.(model.OrderList)...)
 	}
