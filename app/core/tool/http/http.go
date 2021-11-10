@@ -89,7 +89,7 @@ func mergeBasicHeader(req *http.Request, header http.Header) http.Header {
 
 func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err error) {
 	if resp == nil {
-		clog.VerboseLog.With(zap.String("err", err.Error())).Error("jsonify, response nil")
+		clog.VerboseLog.Error("jsonify, response nil")
 		return new(interface{}), err
 	}
 
@@ -97,9 +97,9 @@ func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err 
 	defer resp.Body.Close()
 	if err != nil {
 		clog.VerboseLog.With(
-			zap.Reflect("resp", resp),
 			zap.String("err", err.Error()),
 		).Error("jsonify, read response")
+		return new(interface{}), err
 	}
 
 	respStr := string(bodyBytes)
