@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"math/big"
 )
 
@@ -43,6 +44,7 @@ type AppearSymbolPair struct {
 type SymbolPairBetterPrice struct {
 	AppearSymbolPair AppearSymbolPair
 	LowestOfAskPrice *big.Float
+	Ctx context.Context
 }
 
 type SymbolPairInfoList []struct {

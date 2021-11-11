@@ -7,6 +7,7 @@ import (
 	clog "cc-robot/core/tool/log"
 	"cc-robot/core/tool/mysql"
 	"cc-robot/core/tool/redis"
+	cruntime "cc-robot/core/tool/runtime"
 	"cc-robot/dao"
 	emexc "cc-robot/extern"
 	"cc-robot/model"
@@ -21,8 +22,8 @@ import (
 	"time"
 )
 
-func fetchSupportSymbolPairs(app App) {
-	mexcAPIData := emexc.SupportSymbolPair()
+func fetchSupportSymbolPairs(app App, ctx context.Context) {
+	mexcAPIData := emexc.SupportSymbolPair(ctx)
 	if !mexcAPIData.OK {
 		return
 	}
@@ -36,22 +37,22 @@ func fetchSupportSymbolPairs(app App) {
 	}
 	supportSymbolPair.SymbolPairMap = symbolPairMap
 
-	clog.EventLog.With(
+	clog.WithCtxEventLog(ctx).With(
 		zap.Int("supportSymbolPair count", len(supportSymbolPair.SymbolPairList)),
 	).Info("fetched symbol pairs")
 
 	persistentSymbolPairs(supportSymbolPair)
 }
 
-func getAppearSymbolPairs(app App) {
+func getAppearSymbolPairs(app App, ctx context.Context) {
 	var exchangeSymbolPairList []dao.ExchangeSymbolPair
 	mysql.MySQLClient().Where("open_timestamp = 0").Find(&exchangeSymbolPairList)
-	clog.EventLog.With(zap.Int("exchangeSymbolPairList count", len(exchangeSymbolPairList))).Info("not open symbol pair yet")
+	clog.WithCtxEventLog(ctx).With(zap.Int("exchangeSymbolPairList count", len(exchangeSymbolPairList))).Info("not open symbol pair yet")
 
 	for _, pair := range exchangeSymbolPairList {
-		logger := clog.EventLog.With(zap.String("symbolPair", pair.SymbolPair))
+		logger := clog.WithCtxEventLog(ctx).With(zap.String("symbolPair", pair.SymbolPair))
 
-		mexcAPIData := emexc.SymbolPairInfo(pair.SymbolPair)
+		mexcAPIData := emexc.SymbolPairInfo(ctx, pair.SymbolPair)
 		if !mexcAPIData.OK {
 			logger.With(zap.String("err", mexcAPIData.Msg)).Debug("get symbol pair info failed")
 			continue
@@ -61,7 +62,7 @@ func getAppearSymbolPairs(app App) {
 		symbolPairInfo.WebLink = "https://www.mexc.com/zh-CN/exchange"
 		if len(symbolPairInfo.OpenTime) == 0 {
 			limit := int64(5)
-			mexcAPIData = emexc.KLine(pair.SymbolPair, "1m", strconv.FormatInt(time.Now().Unix()-((limit+1)*60), 10), strconv.FormatInt(limit, 10))
+			mexcAPIData = emexc.KLine(ctx, pair.SymbolPair, "1m", strconv.FormatInt(time.Now().Unix()-((limit+1)*60), 10), strconv.FormatInt(limit, 10))
 			if mexcAPIData.OK {
 				kLineData := mexcAPIData.Payload.([]interface{})
 				if len(kLineData) > 0 {
@@ -84,7 +85,7 @@ func getAppearSymbolPairs(app App) {
 		exchangeSymbolPair.OpenTimestamp = int(openTime.Unix())
 		if openTime.Unix() > time.Now().Unix() {
 			msg := fmt.Sprintf("%s appear %s/%s, open time: %s", pair.ExchangeName, symbolPairInfo.WebLink, pair.SymbolPair, openTime)
-			cinfra.GiantEventText(msg)
+			cinfra.GiantEventText(ctx, msg)
 		}
 
 		mysql.MySQLClient().Where("symbol_pair = ?", pair.SymbolPair).Updates(exchangeSymbolPair)
@@ -106,8 +107,8 @@ func persistentSymbolPairs(supportSymbolPair model.SupportSymbolPair) {
 	}
 }
 
-func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPair) {
-	mexcAPIData := emexc.DepthInfo(appearSymbolPair.SymbolPair, "5")
+func processMexcSymbolPairTicker(app App, ctx context.Context, appearSymbolPair model.AppearSymbolPair) {
+	mexcAPIData := emexc.DepthInfo(ctx, appearSymbolPair.SymbolPair, "5")
 	if !mexcAPIData.OK {
 		return
 	}
@@ -116,43 +117,44 @@ func processMexcSymbolPairTicker(app App, appearSymbolPair model.AppearSymbolPai
 
 	asks := depthInfo.Asks
 	if asks == nil {
-		clog.EventLog.Error("asks is nil")
+		clog.WithCtxEventLog(ctx).Error("asks is nil")
 		return
 	}
 	if len(asks) <= 0 {
-		clog.EventLog.Info("asks is empty")
+		clog.WithCtxEventLog(ctx).Error("asks is empty")
 		return
 	}
 
 	lowestOfAsk := asks[0]
 	float, err := strconv.ParseFloat(lowestOfAsk.Price, 64)
 	if err != nil {
-		clog.EventLog.Error("parse float failed")
+		clog.WithCtxEventLog(ctx).Error("parse float failed")
 		return
 	}
 	lowestOfAskPrice := big.NewFloat(float)
 
 	oldLowestOfAskPrice := app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice
 
-	logger := clog.EventLog.With(
-		zap.String("symbolPair", appearSymbolPair.SymbolPair),
-		zap.Reflect("old price", app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice),
-		zap.Reflect("new price", lowestOfAskPrice),
-	)
 	if oldLowestOfAskPrice == nil || lowestOfAskPrice.Cmp(oldLowestOfAskPrice) != 0 || !app.adjustOrderFailed[appearSymbolPair.SymbolPair] {
 		// TODO: @qingbao, close previous app.processOrderManagerCh
-		app.processOrderManagerCh <- model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
+		app.processOrderManagerCh <- model.SymbolPairBetterPrice{
+			AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice,
+			Ctx: clog.NewContext(ctx, zap.String(cruntime.FuncName() + "-traceId", cid.UniuqeId())),
+		}
 		app.AppearSymbolPairManager[appearSymbolPair.SymbolPair] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair, LowestOfAskPrice: lowestOfAskPrice}
-		logger.Info("better price need update")
+		clog.WithCtxEventLog(ctx).With(
+			zap.Reflect("old price", app.AppearSymbolPairManager[appearSymbolPair.SymbolPair].LowestOfAskPrice),
+			zap.Reflect("new price", lowestOfAskPrice),
+		).Info("better price need update")
 	}
 }
 
-func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice) {
+func processMexcOrder(app App, ctx context.Context, symbolPairBetterPrice model.SymbolPairBetterPrice) {
 	symbolPair := symbolPairBetterPrice.AppearSymbolPair.SymbolPair
 	symbolPairConf := app.SymbolPairConf[symbolPair]
-	logger := clog.EventLog.With(zap.String("symbolPair", symbolPair))
+	logger := clog.WithCtxEventLog(ctx)
 
-	bidOrderList, err := getOrderList(symbolPair, "BID")
+	bidOrderList, err := getOrderList(ctx, symbolPair, "BID")
 	if err != nil {
 		logger.Error(err.Error())
 		return
@@ -180,7 +182,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	lowestOfAskPrice := symbolPairBetterPrice.LowestOfAskPrice
 
 	// cancel all orders of the symbol pair
-	mexcAPIData := emexc.CancelOrder(symbolPair)
+	mexcAPIData := emexc.CancelOrder(ctx, symbolPair)
 	if !mexcAPIData.OK {
 		logger.Error("cancel order failed")
 		app.adjustOrderFailed[symbolPair] = false
@@ -198,13 +200,13 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	// bid finished: deal 90% cost
 	totalDealCostRate.Quo(totalDealCost, bidCost)
 	if totalDealCostRate.Cmp(big.NewFloat(0.9)) < 0 {
-		logger.Info("add position")
+		logger.Info("prepare try add position")
 
 		bidCost.Sub(bidCost, totalDealCost)
 		quantity := big.NewFloat(0)
 		quantity.Quo(bidCost, testBidPrice)
 
-		clog.EventLog.With(
+		clog.WithCtxEventLog(ctx).With(
 			zap.Any("bidCost", bidCost),
 			zap.String("symbol", symbolPair),
 			zap.Any("quantity", quantity),
@@ -215,7 +217,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 			zap.Any("totalHoldQuantity", totalHoldQuantity),
 		).Info("prepare bid detail")
 
-		mexcAPIData = adjustPosition(symbolPair, "BID", testBidPrice, quantity)
+		mexcAPIData = adjustPosition(ctx, symbolPair, "BID", testBidPrice, quantity)
 		if mexcAPIData.OK {
 			logger.Info("create order is ok")
 			app.adjustOrderFailed[symbolPair] = true
@@ -224,13 +226,13 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 			app.adjustOrderFailed[symbolPair] = false
 		}
 	} else {
-		logger.Info("sub position")
+		logger.Info("prepare try sub position")
 
 		if lowestOfAskPrice.Cmp(big.NewFloat(0)) <= 0 {
 			logger.Error("lowest ask price is <= 0")
 			return
 		}
-		mexcAPIData = emexc.AccountInfo()
+		mexcAPIData = emexc.AccountInfo(ctx)
 		accountInfo := mexcAPIData.Payload.(model.AccountInfo)
 		if _, ok := accountInfo[symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0]]; !ok {
 			logger.Info("not hold")
@@ -240,13 +242,13 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		balanceInfo := accountInfo[symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0]]
 		holdQuantityFloat, err := strconv.ParseFloat(balanceInfo.Available, 64)
 		if err != nil {
-			clog.EventLog.With(zap.Reflect("account symbol pair info", balanceInfo)).Error("parse float failed")
+			clog.WithCtxEventLog(ctx).With(zap.Reflect("account symbol pair info", balanceInfo)).Error("parse float failed")
 			return
 		}
 		holdQuantity := big.NewFloat(holdQuantityFloat)
 
 		if holdQuantity.Cmp(big.NewFloat(0)) <= 0 {
-			clog.EventLog.With(zap.Reflect("balanceInfo", balanceInfo)).Error("not hold")
+			clog.WithCtxEventLog(ctx).With(zap.Reflect("balanceInfo", balanceInfo)).Error("not hold")
 			return
 		}
 
@@ -260,7 +262,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		totalProfitRate.Quo(totalProfit, totalDealCost)
 
 		withExpectedProfitRateDiff.Sub(totalProfitRate, expectedProfitRate)
-		clog.EventLog.With(
+		clog.WithCtxEventLog(ctx).With(
 			zap.Reflect("holdQuantity", holdQuantity),
 			zap.Reflect("totalDealCost", totalDealCost),
 			zap.Reflect("totalHoldCost", totalHoldCost),
@@ -272,7 +274,7 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 		hasReachProfit := totalProfitRate.Cmp(expectedProfitRate) >= 0
 		logger.With(zap.Bool("reached?", hasReachProfit)).Info("has reach expected profit rate")
 		if hasReachProfit {
-			mexcAPIData = adjustPosition(symbolPair, "ASK", testBidPrice, holdQuantity)
+			mexcAPIData = adjustPosition(ctx, symbolPair, "ASK", testBidPrice, holdQuantity)
 			if mexcAPIData.OK {
 				logger.Info("create order is ok")
 				app.adjustOrderFailed[symbolPair] = true
@@ -284,8 +286,8 @@ func processMexcOrder(app App, symbolPairBetterPrice model.SymbolPairBetterPrice
 	}
 }
 
-func adjustPosition(symbolPair string, tradeType string, price *big.Float, quantity *big.Float) model.MexcAPIData {
-	mexcAPIData := emexc.CreateOrder(model.Order{
+func adjustPosition(ctx context.Context, symbolPair string, tradeType string, price *big.Float, quantity *big.Float) model.MexcAPIData {
+	mexcAPIData := emexc.CreateOrder(ctx, model.Order{
 		SymbolPair:    symbolPair,
 		Price:         price.String(),
 		Quantity:      quantity.String(),
@@ -296,10 +298,10 @@ func adjustPosition(symbolPair string, tradeType string, price *big.Float, quant
 	return mexcAPIData
 }
 
-func getOrderList(symbolPair string, tradeType string) (orderList model.OrderList, err error) {
+func getOrderList(ctx context.Context, symbolPair string, tradeType string) (orderList model.OrderList, err error) {
 	states := []string{"FILLED", "PARTIALLY_FILLED", "PARTIALLY_CANCELED"}
 	for _, state := range states {
-		mexcAPIData := emexc.OrderList(symbolPair, tradeType, state, "1000", "")
+		mexcAPIData := emexc.OrderList(ctx, symbolPair, tradeType, state, "1000", "")
 		if !mexcAPIData.OK {
 			return nil, errors.New("order list inconsistency: " + mexcAPIData.Msg)
 		}

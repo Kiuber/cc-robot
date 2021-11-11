@@ -1,6 +1,7 @@
 package clog
 
 import (
+	"context"
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -8,6 +9,8 @@ import (
 	"log"
 )
 
+const eventLogKey = iota
+const verboseLogKey = iota
 var EventLog *zap.Logger
 var VerboseLog *zap.Logger
 
@@ -83,4 +86,29 @@ func buildLogPath(fileName string) string {
 	path := fmt.Sprintf("%s/%s", logBaseDir, fileName)
 	log.Printf("log path: %s", path)
 	return path
+}
+
+func NewContext(ctx context.Context, fields ...zapcore.Field) context.Context {
+	ctx = context.WithValue(ctx, eventLogKey, WithCtxEventLog(ctx).With(fields...))
+	return context.WithValue(ctx, verboseLogKey, WithCtxVerboseLog(ctx).With(fields...))
+}
+
+func WithCtxEventLog(ctx context.Context) *zap.Logger {
+	if ctx == nil {
+		return EventLog
+	}
+	if ctxLogger, ok := ctx.Value(eventLogKey).(*zap.Logger); ok {
+		return ctxLogger
+	}
+	return EventLog
+}
+
+func WithCtxVerboseLog(ctx context.Context) *zap.Logger {
+	if ctx == nil {
+		return VerboseLog
+	}
+	if ctxLogger, ok := ctx.Value(verboseLogKey).(*zap.Logger); ok {
+		return ctxLogger
+	}
+	return VerboseLog
 }

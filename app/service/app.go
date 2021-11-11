@@ -1,8 +1,11 @@
 package service
 
 import (
+	cid "cc-robot/core/tool/id"
 	clog "cc-robot/core/tool/log"
+	cruntime "cc-robot/core/tool/runtime"
 	"cc-robot/model"
+	"context"
 	"go.uber.org/zap"
 	"math/big"
 	"time"
@@ -50,6 +53,11 @@ func (app *App) listenBetterPrice() {
 	for {
 		select {
 		case appearSymbolPair := <-app.AcquireBetterPriceCh:
+			ctx := clog.NewContext(context.TODO(),
+				zap.String("symbolPair", appearSymbolPair.SymbolPair),
+				zap.String(cruntime.FuncName() + "-traceId", cid.UniuqeId()),
+			)
+
 			if _, ok := app.ListeningSymbolPair[appearSymbolPair.SymbolPair]; !ok {
 				app.ListeningSymbolPair[appearSymbolPair.SymbolPair] = appearSymbolPair.Symbol1And2
 				app.SymbolPairConf[appearSymbolPair.SymbolPair] = model.SymbolPairConf{
@@ -57,9 +65,9 @@ func (app *App) listenBetterPrice() {
 					BidCost:            big.NewFloat(10),
 					ExpectedProfitRate: big.NewFloat(0.1),
 				}
-				go app.ProcessMexcSymbolPairTicker(appearSymbolPair)
+				go app.ProcessMexcSymbolPairTicker(ctx, appearSymbolPair)
 			} else {
-				clog.EventLog.With(zap.Reflect("appearSymbolPair", appearSymbolPair)).Error("listen better price exist")
+				clog.WithCtxEventLog(ctx).With(zap.Reflect("appearSymbolPair", appearSymbolPair)).Error("listen better price exist")
 			}
 		}
 	}
@@ -76,53 +84,47 @@ func (app *App) listenOrderManager() {
 
 func (app *App) FetchSupportSymbolPairs() {
 	for {
-		fetchSupportSymbolPairs(*app)
+		fetchSupportSymbolPairs(*app, context.TODO())
 		time.Sleep(10 * time.Minute)
 	}
 }
 
 func (app *App) GetAppearSymbolPairs() {
 	for {
-		getAppearSymbolPairs(*app)
+		getAppearSymbolPairs(*app, context.TODO())
 		time.Sleep(10 * time.Minute)
 	}
 }
 
-func (app *App) ProcessMexcSymbolPairTicker(appearSymbolPair model.AppearSymbolPair) {
-	if !app.shouldContinueBySupportSymbolPair(appearSymbolPair.Symbol1And2) {
+func (app *App) ProcessMexcSymbolPairTicker(ctx context.Context, appearSymbolPair model.AppearSymbolPair) {
+	if !app.shouldContinueBySupportSymbolPair(ctx, appearSymbolPair.Symbol1And2) {
 		return
 	}
 
 	for {
-		processMexcSymbolPairTicker(*app, appearSymbolPair)
+		processMexcSymbolPairTicker(*app, ctx, appearSymbolPair)
 	}
 }
 
 func (app *App) ProcessOrder(symbolPairBetterPrice model.SymbolPairBetterPrice) {
-	if !app.shouldContinueBySupportSymbolPair(symbolPairBetterPrice.AppearSymbolPair.Symbol1And2) {
+	if !app.shouldContinueBySupportSymbolPair(symbolPairBetterPrice.Ctx, symbolPairBetterPrice.AppearSymbolPair.Symbol1And2) {
 		return
 	}
 
-	processMexcOrder(*app, symbolPairBetterPrice)
+	processMexcOrder(*app, symbolPairBetterPrice.Ctx, symbolPairBetterPrice)
 }
 
-func (app *App) shouldContinueBySupportSymbolPair(symbol1And2 []string) bool {
+func (app *App) shouldContinueBySupportSymbolPair(ctx context.Context, symbol1And2 []string) bool {
 	if len(symbol1And2) != 2 {
-		clog.EventLog.With(
-			zap.Reflect("symbol1And2", symbol1And2),
-		).Error("not support symbol pair")
+		clog.WithCtxEventLog(ctx).Error("not support symbol pair")
 		return false
 	}
 
-	leftSymbol := symbol1And2[0]
 	rightSymbol := symbol1And2[1]
 	supportRightSymbol := "USDT"
 	ok := rightSymbol == supportRightSymbol
 	if !ok {
-		clog.EventLog.With(
-			zap.String("leftSymbol", leftSymbol),
-			zap.String("rightSymbol", rightSymbol),
-		).Error("not support symbol pair")
+		clog.WithCtxEventLog(ctx).Error("not support symbol pair")
 	}
 	return ok
 }

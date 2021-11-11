@@ -3,6 +3,7 @@ package chttp
 import (
 	cid "cc-robot/core/tool/id"
 	clog "cc-robot/core/tool/log"
+	"context"
 	"encoding/json"
 	"go.uber.org/zap"
 	"io"
@@ -13,50 +14,50 @@ import (
 
 const ExtraRequestIdField = "Extra-Request-Id"
 
-func HttpGetJson(url string, header http.Header) (data interface{}, err error) {
-	resp, err, req := httpGet(url, header)
-	return jsonifyResp(resp, req)
+func HttpGetJson(ctx context.Context, url string, header http.Header) (data interface{}, err error) {
+	resp, err, req := httpGet(ctx, url, header)
+	return jsonifyResp(ctx, resp, req)
 }
 
-func HttpPostJson(url string, header http.Header, body io.Reader) (data interface{}, err error) {
-	resp, err, req := httpPost(url, header, body)
-	return jsonifyResp(resp, req)
+func HttpPostJson(ctx context.Context, url string, header http.Header, body io.Reader) (data interface{}, err error) {
+	resp, err, req := httpPost(ctx, url, header, body)
+	return jsonifyResp(ctx, resp, req)
 }
 
-func HttpDeleteJson(url string, header http.Header, body io.Reader) (data interface{}, err error) {
-	resp, err, req := httpDelete(url, header, body)
-	return jsonifyResp(resp, req)
+func HttpDeleteJson(ctx context.Context, url string, header http.Header, body io.Reader) (data interface{}, err error) {
+	resp, err, req := httpDelete(ctx, url, header, body)
+	return jsonifyResp(ctx, resp, req)
 }
 
-func httpGet(url string, header http.Header) (resp *http.Response, err error, req *http.Request) {
-	req, err = buildRequest("GET", url, header, nil)
-	resp, err = doRequest(req)
+func httpGet(ctx context.Context, url string, header http.Header) (resp *http.Response, err error, req *http.Request) {
+	req, err = buildRequest(ctx, "GET", url, header, nil)
+	resp, err = doRequest(ctx, req)
 	return resp, err, req
 }
 
-func httpPost(url string, header http.Header, body io.Reader) (resp *http.Response, err error, req *http.Request) {
-	req, err = buildRequest("POST", url, header, body)
-	resp, err = doRequest(req)
+func httpPost(ctx context.Context, url string, header http.Header, body io.Reader) (resp *http.Response, err error, req *http.Request) {
+	req, err = buildRequest(ctx, "POST", url, header, body)
+	resp, err = doRequest(ctx, req)
 	return resp, err, req
 }
 
-func httpDelete(url string, header http.Header, body io.Reader) (resp *http.Response, err error, req *http.Request) {
-	req, err = buildRequest("DELETE", url, header, body)
-	resp, err = doRequest(req)
+func httpDelete(ctx context.Context, url string, header http.Header, body io.Reader) (resp *http.Response, err error, req *http.Request) {
+	req, err = buildRequest(ctx, "DELETE", url, header, body)
+	resp, err = doRequest(ctx, req)
 	return resp, err, req
 }
 
-func buildRequest(method string, url string, header http.Header, body io.Reader) (resp *http.Request, err error) {
+func buildRequest(ctx context.Context, method string, url string, header http.Header, body io.Reader) (resp *http.Request, err error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		clog.VerboseLog.With(zap.String("err", err.Error())).Error("new request failed")
+		clog.WithCtxVerboseLog(ctx).With(zap.String("err", err.Error())).Error("new request failed")
 	}
 	req.Header = mergeBasicHeader(req, header)
 	return req, nil
 }
 
-func doRequest(req *http.Request) (resp *http.Response, err error) {
-	logger := clog.VerboseLog.With(
+func doRequest(ctx context.Context, req *http.Request) (resp *http.Response, err error) {
+	logger := clog.WithCtxVerboseLog(ctx).With(
 		zap.String("method", req.Method),
 		zap.String("url", req.URL.String()),
 		zap.Reflect("header", req.Header),
@@ -87,16 +88,16 @@ func mergeBasicHeader(req *http.Request, header http.Header) http.Header {
 	return header
 }
 
-func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err error) {
+func jsonifyResp(ctx context.Context, resp *http.Response, req *http.Request) (data interface{}, err error) {
 	if resp == nil {
-		clog.VerboseLog.Error("jsonify, response nil")
+		clog.WithCtxVerboseLog(ctx).Error("jsonify, response nil")
 		return new(interface{}), err
 	}
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	if err != nil {
-		clog.VerboseLog.With(
+		clog.WithCtxVerboseLog(ctx).With(
 			zap.String("err", err.Error()),
 		).Error("jsonify, read response")
 		return new(interface{}), err
@@ -105,7 +106,7 @@ func jsonifyResp(resp *http.Response, req *http.Request) (data interface{}, err 
 	respStr := string(bodyBytes)
 	err = json.Unmarshal(bodyBytes, &data)
 
-	logger := clog.VerboseLog.With(
+	logger := clog.WithCtxVerboseLog(ctx).With(
 		zap.String("respStr", respStr),
 		zap.String(ExtraRequestIdField, req.Header.Get(ExtraRequestIdField)),
 		zap.Reflect("err", err),
