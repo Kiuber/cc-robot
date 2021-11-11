@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-func fetchSupportSymbolPairs(app App, ctx context.Context) {
+func fetchAndUpsertAPISupportSymbolPairs(ctx context.Context) {
 	mexcAPIData := emexc.SupportSymbolPair(ctx)
 	if !mexcAPIData.OK {
 		return
@@ -44,7 +44,7 @@ func fetchSupportSymbolPairs(app App, ctx context.Context) {
 	persistentSymbolPairs(supportSymbolPair)
 }
 
-func getAppearSymbolPairs(app App, ctx context.Context) {
+func checkAndAlarmForSymbolPairs(ctx context.Context) {
 	var exchangeSymbolPairList []dao.ExchangeSymbolPair
 	mysql.MySQLClient().Where("open_timestamp = 0").Find(&exchangeSymbolPairList)
 	clog.WithCtxEventLog(ctx).With(zap.Int("exchangeSymbolPairList count", len(exchangeSymbolPairList))).Info("not open symbol pair yet")

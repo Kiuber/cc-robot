@@ -8,7 +8,6 @@ import (
 	"context"
 	"go.uber.org/zap"
 	"math/big"
-	"time"
 )
 
 type App struct {
@@ -42,9 +41,6 @@ func initApp() *App {
 }
 
 func (app *App) initLogic() {
-	go app.FetchSupportSymbolPairs()
-	go app.GetAppearSymbolPairs()
-
 	go app.listenBetterPrice()
 	go app.listenOrderManager()
 }
@@ -82,20 +78,6 @@ func (app *App) listenOrderManager() {
 	}
 }
 
-func (app *App) FetchSupportSymbolPairs() {
-	for {
-		fetchSupportSymbolPairs(*app, context.TODO())
-		time.Sleep(10 * time.Minute)
-	}
-}
-
-func (app *App) GetAppearSymbolPairs() {
-	for {
-		getAppearSymbolPairs(*app, context.TODO())
-		time.Sleep(10 * time.Minute)
-	}
-}
-
 func (app *App) ProcessMexcSymbolPairTicker(ctx context.Context, appearSymbolPair model.AppearSymbolPair) {
 	if !app.shouldContinueBySupportSymbolPair(ctx, appearSymbolPair.Symbol1And2) {
 		return
@@ -127,4 +109,14 @@ func (app *App) shouldContinueBySupportSymbolPair(ctx context.Context, symbol1An
 		clog.WithCtxEventLog(ctx).Error("not support symbol pair")
 	}
 	return ok
+}
+
+func (app *App) FetchAndUpsertAPISupportSymbolPairs() {
+	ctx := clog.NewContext(context.TODO(), zap.String(cruntime.FuncName() + "-traceId", cid.UniuqeId()))
+	fetchAndUpsertAPISupportSymbolPairs(ctx)
+}
+
+func (app *App) CheckAndAlarmForSymbolPairs() {
+	ctx := clog.NewContext(context.TODO(), zap.String(cruntime.FuncName() + "-traceId", cid.UniuqeId()))
+	checkAndAlarmForSymbolPairs(ctx)
 }

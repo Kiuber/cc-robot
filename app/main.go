@@ -23,6 +23,7 @@ func main() {
 	}
 
 	app := service.RunApp()
+	go service.RunCron(app)
 	startAppListenTcpService(app)
 
 	if cboot.GV.IsDev {

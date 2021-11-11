@@ -6,6 +6,7 @@ require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/go-redis/redis/v8 v8.11.4
 	github.com/mitchellh/mapstructure v1.4.2
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/sony/sonyflake v1.0.0
 	github.com/tidwall/pretty v1.2.0
 	go.uber.org/zap v1.19.1
