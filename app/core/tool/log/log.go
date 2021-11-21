@@ -11,6 +11,7 @@ import (
 
 const eventLogKey = "eventLogKey"
 const verboseLogKey = "verboseLogKey"
+
 var EventLog *zap.Logger
 var VerboseLog *zap.Logger
 

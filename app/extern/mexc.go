@@ -34,7 +34,6 @@ func SupportSymbolPair(ctx context.Context) model.MexcAPIData {
 
 	supportSymbols := new(model.SupportSymbolPair)
 	mapstructure.Decode(mexcAPIData.RawPayload, &supportSymbols)
-	supportSymbols.Exchange = "mexc"
 	mexcAPIData.Payload = *supportSymbols
 	return mexcAPIData
 }
@@ -193,9 +192,9 @@ func processResp(ctx context.Context, url string, resp interface{}, err error) m
 
 func buildUrl(apiPath string) string {
 	if strings.HasPrefix(apiPath, "api/") {
-		return fmt.Sprintf("%s/%s", "https://mexc.com", apiPath)
-	} else {
 		return fmt.Sprintf("%s/%s", cboot.GV.Config.Api.Mexc.BaseURL, apiPath)
+	} else {
+		return fmt.Sprintf("%s/%s/%s", cboot.GV.Config.Api.Mexc.BaseURL, "open/api/v2", apiPath)
 	}
 }
 

@@ -15,3 +15,15 @@ type ExchangeSymbolPair struct {
 func (ExchangeSymbolPair) TableName() string {
 	return "s_cc_exchange_symbol_pair"
 }
+
+type ExchangePrimeConfig struct {
+	ExchangeName string
+	SymbolPair   string
+	status       string
+	CreatedAt    time.Time `gorm:"column:ctime"`
+	UpdatedAt    time.Time `gorm:"column:mtime"`
+}
+
+func (ExchangePrimeConfig) TableName() string {
+	return "s_cc_exchange_prime_config"
+}

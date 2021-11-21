@@ -26,7 +26,6 @@ type MockAPIData map[string]struct {
 type SupportSymbolPair struct {
 	SymbolPairList []string `mapstructure:"symbol"`
 	SymbolPairMap  map[string][]string
-	Exchange       string
 }
 
 type SymbolPairInfo struct {
@@ -44,7 +43,7 @@ type AppearSymbolPair struct {
 type SymbolPairBetterPrice struct {
 	AppearSymbolPair AppearSymbolPair
 	LowestOfAskPrice *big.Float
-	Ctx context.Context
+	Ctx              context.Context
 }
 
 type SymbolPairInfoList []struct {
@@ -112,6 +111,12 @@ type AccountInfo map[string]struct {
 }
 
 type SymbolPairConf struct {
+	TotalDealCost      *big.Float
+	BidDiffCost        *big.Float
 	BidCost            *big.Float
 	ExpectedProfitRate *big.Float
+}
+
+func (s *SymbolPairConf) UpdateTotalDealCost(totalDealCost *big.Float) {
+	s.TotalDealCost = totalDealCost
 }

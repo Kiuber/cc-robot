@@ -37,7 +37,7 @@ type EventNU struct {
 
 const (
 	EventRobotChannelWechat   string = "wechat"
-	EventRobotChannelDingtalk string = "dingtalk"
+	EventRobotChannelDingtalk string = "internal"
 	EventRobotChannelAll      string = "all"
 )
 

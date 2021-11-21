@@ -7,8 +7,12 @@ import (
 	"strconv"
 )
 
+var flake *sonyflake.Sonyflake
+
 func UniuqeId() string {
-	flake := sonyflake.NewSonyflake(sonyflake.Settings{})
+	if flake == nil {
+		flake = sonyflake.NewSonyflake(sonyflake.Settings{})
+	}
 	id, err := flake.NextID()
 	if err != nil {
 		clog.EventLog.With(zap.String("err", err.Error())).Error("nextID")

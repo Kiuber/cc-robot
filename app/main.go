@@ -8,10 +8,8 @@ import (
 	"cc-robot/service"
 	"fmt"
 	"go.uber.org/zap"
-	"math/big"
 	"net"
 	"net/http"
-	"strings"
 )
 
 func main() {
@@ -45,28 +43,13 @@ func startAppListenTcpService(app *service.App) {
 	http.HandleFunc("/summary", func(writer http.ResponseWriter, request *http.Request) {
 		fmt.Fprintln(writer, cjson.Pretty(buildSummary(app)))
 	})
-	http.HandleFunc("/appear-symbol-pair", func(writer http.ResponseWriter, request *http.Request) {
-		symbolPairParam := request.URL.Query().Get("symbol_pair")
-		symbol1And2 := strings.Split(symbolPairParam, "_")
-		appearSymbolPair := model.AppearSymbolPair{SymbolPair: symbolPairParam, Symbol1And2: symbol1And2}
-
-		app.AcquireBetterPriceCh <- appearSymbolPair
-		app.AppearSymbolPairManager[symbolPairParam] = model.SymbolPairBetterPrice{AppearSymbolPair: appearSymbolPair}
-
+	http.HandleFunc("/check-support-symbol-pair", func(writer http.ResponseWriter, request *http.Request) {
+		app.Exchange.SaveAPISupportSymbolPairsOfAllExchanges()
+		app.Prime.CheckAndAlarmSymbolPairsOfAllExchanges()
 		fmt.Fprintln(writer, cjson.Pretty(buildSummary(app)))
 	})
-	http.HandleFunc("/update-symbol-pair-conf", func(writer http.ResponseWriter, request *http.Request) {
-		symbolPairParam := request.URL.Query().Get("symbol_pair")
-		expectedProfitRateParam := request.URL.Query().Get("expected_profit_rate")
-		expectedProfitRate, ok := big.NewFloat(0).SetString(expectedProfitRateParam)
-		if !ok {
-			fmt.Fprintln(writer, "expectedProfitRateParam illegal")
-			return
-		}
-		app.SymbolPairConf[symbolPairParam] = model.SymbolPairConf{
-			BidCost:            app.SymbolPairConf[symbolPairParam].BidCost,
-			ExpectedProfitRate: expectedProfitRate,
-		}
+	http.HandleFunc("/fetch-prime-symbol-pair", func(writer http.ResponseWriter, request *http.Request) {
+		app.Prime.TryUpdatePrimeSymbolPair()
 		fmt.Fprintln(writer, cjson.Pretty(buildSummary(app)))
 	})
 	panic(http.Serve(listener, nil))
@@ -74,8 +57,8 @@ func startAppListenTcpService(app *service.App) {
 
 func buildSummary(app *service.App) map[string]interface{} {
 	return map[string]interface{}{
-		"AppearSymbolPairManager": app.AppearSymbolPairManager,
-		"ListeningSymbolPair":     app.ListeningSymbolPair,
-		"SymbolPairConf":          app.SymbolPairConf,
+		"AppearSymbolPairManager": app.Prime.AppearSymbolPairManager,
+		"ListeningSymbolPair":     app.Prime.ListeningSymbolPair,
+		"SymbolPairConf":          app.Prime.SymbolPairConf,
 	}
 }
