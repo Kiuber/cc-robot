@@ -19,7 +19,7 @@ func (ExchangeSymbolPair) TableName() string {
 type ExchangePrimeConfig struct {
 	ExchangeName string
 	SymbolPair   string
-	status       string
+	Status       string
 	CreatedAt    time.Time `gorm:"column:ctime"`
 	UpdatedAt    time.Time `gorm:"column:mtime"`
 }

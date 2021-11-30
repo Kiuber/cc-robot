@@ -114,10 +114,7 @@ func (prime *Prime) TryUpdatePrimeSymbolPair() {
 		}
 
 		if !symbolPairDisabled {
-			logger.With(zap.String("symbolPair", symbolPair)).Info("remove symbol pair for prime")
-			delete(prime.ListeningSymbolPair, symbolPair)
-			delete(prime.AppearSymbolPairManager, symbolPair)
-			delete(prime.SymbolPairConf, symbolPair)
+			prime.removePrimeSymbolPair(ctx, symbolPair)
 		}
 	}
 
@@ -211,7 +208,7 @@ func (prime *Prime) checkAndAlarmForSymbolPairs(exchangeName string) {
 		exchangeSymbolPair.OpenTimestamp = int(openTime.Unix())
 		if openTime.Unix() > time.Now().Unix() {
 			clog.WithCtxEventLog(ctx).With(zap.String("symbolPair", pair.SymbolPair)).Info("new symbol pair")
-			msg := fmt.Sprintf("%s 出现 %s 交易对，链接：%s/%s, 开盘时间: %s", pair.ExchangeName, pair.SymbolPair, symbolPairInfo.WebLink, pair.SymbolPair, openTime.Format(time.RFC3339Nano))
+			msg := fmt.Sprintf("%s 出现 %s 交易对，链接：%s/%s，开盘时间: %s", pair.ExchangeName, pair.SymbolPair, symbolPairInfo.WebLink, pair.SymbolPair, openTime.Format(time.RFC3339Nano))
 			cinfra.GiantEventText(ctx, msg)
 		}
 
@@ -360,6 +357,8 @@ func (prime *Prime) doBuyOrTakeProfit(ctx context.Context, symbolPairBetterPrice
 		accountInfo := mexcAPIData.Payload.(model.AccountInfo)
 		if _, ok := accountInfo[symbolPairBetterPrice.AppearSymbolPair.Symbol1And2[0]]; !ok {
 			logger.Info("not hold")
+			prime.disablePrimeSymbolPair(ctx, symbolPair)
+			prime.removePrimeSymbolPair(ctx, symbolPair)
 			return
 		}
 
@@ -373,6 +372,8 @@ func (prime *Prime) doBuyOrTakeProfit(ctx context.Context, symbolPairBetterPrice
 
 		if holdQuantity.Cmp(big.NewFloat(0)) <= 0 {
 			clog.WithCtxEventLog(ctx).With(zap.Reflect("balanceInfo", balanceInfo)).Error("not hold")
+			prime.disablePrimeSymbolPair(ctx, symbolPair)
+			prime.removePrimeSymbolPair(ctx, symbolPair)
 			return
 		}
 
@@ -408,6 +409,20 @@ func (prime *Prime) doBuyOrTakeProfit(ctx context.Context, symbolPairBetterPrice
 			}
 		}
 	}
+}
+
+func (prime *Prime) removePrimeSymbolPair(ctx context.Context, symbolPair string) {
+	clog.WithCtxEventLog(ctx).With(zap.String("symbolPair", symbolPair)).Info("remove symbol pair for prime")
+	delete(prime.ListeningSymbolPair, symbolPair)
+	delete(prime.AppearSymbolPairManager, symbolPair)
+	delete(prime.SymbolPairConf, symbolPair)
+}
+
+func (prime *Prime) disablePrimeSymbolPair(ctx context.Context, symbolPair string) {
+	clog.WithCtxEventLog(ctx).Info("disable prime config")
+	var exchangeSymbolPair dao.ExchangePrimeConfig
+	exchangeSymbolPair.Status = "disabled"
+	mysql.MySQLClient().Where("symbol_pair = ?", symbolPair).Updates(exchangeSymbolPair)
 }
 
 func (prime *Prime) isSupportThisSymbolPair(ctx context.Context, symbol1And2 []string) bool {
