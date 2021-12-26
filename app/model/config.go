@@ -36,9 +36,8 @@ type EventNU struct {
 }
 
 const (
-	EventRobotChannelWechat   string = "wechat"
-	EventRobotChannelDingtalk string = "internal"
-	EventRobotChannelAll      string = "all"
+	EventNotifyGroupDev  string = "internal"
+	EventNotifyGroupProd string = "all"
 )
 
 type Api struct {
