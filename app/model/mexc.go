@@ -34,6 +34,11 @@ type SymbolPairInfo struct {
 	OpenTime   string `mapstructure:"openTime"`
 }
 
+type SymbolIntroduceInfo struct {
+	Symbol      string
+	IntroduceCn string
+}
+
 type AppearSymbolPair struct {
 	SymbolPair   string
 	Symbol1And2  []string

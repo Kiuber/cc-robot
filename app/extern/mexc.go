@@ -133,6 +133,17 @@ func SymbolPairInfo(ctx context.Context, symbolPair string) model.MexcAPIData {
 	return mexcAPIData
 }
 
+func SymbolIntroduceInfo(ctx context.Context, symbol string) model.MexcAPIData {
+	params := url.Values{}
+	params.Set("currency", symbol)
+	mexcAPIData := mexcGetJson(ctx, "api/platform/spot/market/introduce", params)
+	symbolIntroduceInfo := new(model.SymbolIntroduceInfo)
+	mapstructure.Decode(mexcAPIData.RawPayload, &symbolIntroduceInfo)
+	symbolIntroduceInfo.Symbol = symbol
+	mexcAPIData.Payload = *symbolIntroduceInfo
+	return mexcAPIData
+}
+
 func mexcGetJson(ctx context.Context, apiPath string, params url.Values) model.MexcAPIData {
 	url := buildUrl(apiPath)
 	header := buildHeader(params, nil)

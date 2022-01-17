@@ -209,6 +209,14 @@ func (prime *Prime) checkAndAlarmForSymbolPairs(exchangeName string) {
 		if openTime.Unix() > time.Now().Unix() {
 			clog.WithCtxEventLog(ctx).With(zap.String("symbolPair", pair.SymbolPair)).Info("new symbol pair")
 			msg := fmt.Sprintf("%s 出现 %s 交易对，链接：%s/%s，开盘时间: %s", pair.ExchangeName, pair.SymbolPair, symbolPairInfo.WebLink, pair.SymbolPair, openTime.Format(time.RFC3339Nano))
+
+			mexcAPIData = emexc.SymbolIntroduceInfo(ctx, pair.Symbol1)
+			if mexcAPIData.OK {
+				logger.With(zap.String("err", mexcAPIData.Msg)).Debug("get symbol introduce info failed")
+				symbolIntroduceInfo := mexcAPIData.Payload.(model.SymbolIntroduceInfo)
+				msg = fmt.Sprintf("%s，介绍：", symbolIntroduceInfo.IntroduceCn)
+			}
+
 			cinfra.GiantEventText(ctx, msg)
 		}
 
