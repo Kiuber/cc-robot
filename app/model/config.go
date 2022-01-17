@@ -37,7 +37,7 @@ type EventNU struct {
 
 const (
 	EventNotifyGroupDev  string = "internal"
-	EventNotifyGroupProd string = "all"
+	EventNotifyGroupProd string = "rs1"
 )
 
 type Api struct {
