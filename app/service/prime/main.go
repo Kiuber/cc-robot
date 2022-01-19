@@ -214,7 +214,7 @@ func (prime *Prime) checkAndAlarmForSymbolPairs(exchangeName string) {
 			if mexcAPIData.OK {
 				logger.With(zap.String("err", mexcAPIData.Msg)).Debug("get symbol introduce info failed")
 				symbolIntroduceInfo := mexcAPIData.Payload.(model.SymbolIntroduceInfo)
-				msg = fmt.Sprintf("%s，介绍：", symbolIntroduceInfo.IntroduceCn)
+				msg = fmt.Sprintf("%s，介绍：%s", msg, symbolIntroduceInfo.IntroduceCn)
 			}
 
 			cinfra.GiantEventText(ctx, msg)
