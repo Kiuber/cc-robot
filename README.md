@@ -1,5 +1,16 @@
 # Cryptocurrency Robot
 
+### How to use
+
+1. Fill config info in config folder, eg: API key and secret, database, redis
+1. Dev:
+   - python manager.py --run
+1. Prod:
+   - python manager.py --build
+   - python manager.py --restart_app_container
+
+### TODO
+
 1. [ ] Infra
    1. [x] boot
    1. [x] run cli args

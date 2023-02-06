@@ -1,0 +1,14 @@
+mysql:
+  host:
+  port:
+  user:
+  password:
+  name:
+
+redis:
+  host:
+  port:
+  password:
+
+event_notify:
+  url:

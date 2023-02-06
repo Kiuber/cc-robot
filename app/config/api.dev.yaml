@@ -1,0 +1,6 @@
+# https://mxcdevelop.github.io/APIDoc/
+mexc:
+  base_url: http://localhost:4444/mexc
+  access_key:
+  access_secret:
+  allow_trade: true
