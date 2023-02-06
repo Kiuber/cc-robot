@@ -2,10 +2,13 @@
 
 ### How to use
 
-1. Fill config info in config folder, eg: API key and secret, database, redis
-1. Dev:
+1. Ensure MySQL Redis ready
+1. Execute MySQL init script
+1. Fill config info in config folder, eg: API key and secret, MySQL, Redis
+
+- Dev:
    - python manager.py --run
-1. Prod:
+- Prod:
    - python manager.py --build
    - python manager.py --restart_app_container
 
