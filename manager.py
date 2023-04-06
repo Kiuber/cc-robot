@@ -1,12 +1,12 @@
 import os
 import sys
 
-from cpbox.app.devops import DevOpsApp
-from cpbox.tool import dockerutil
-from cpbox.tool import file
-from cpbox.tool import functocli
-from cpbox.tool import template
-from cpbox.tool import utils
+from echobox.app.devops import DevOpsApp
+from echobox.tool import dockerutil
+from echobox.tool import file
+from echobox.tool import functocli
+from echobox.tool import template
+from echobox.tool import utils
 
 APP_NAME = 'cc-robot'
 docker_image = APP_NAME
